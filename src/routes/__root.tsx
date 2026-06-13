@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "YtLess" },
+      { name: "description", content: "A web app that plays audio snippets from a YouTube playlist for users to guess the song title." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "YtLess" },
+      { property: "og:description", content: "A web app that plays audio snippets from a YouTube playlist for users to guess the song title." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "YtLess" },
+      { name: "twitter:description", content: "A web app that plays audio snippets from a YouTube playlist for users to guess the song title." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/796abd76-c45c-49ba-9aa7-84f16f409ea1/id-preview-28224669--5db95475-5b82-426f-8759-443aaffe80c2.lovable.app-1781345134512.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/796abd76-c45c-49ba-9aa7-84f16f409ea1/id-preview-28224669--5db95475-5b82-426f-8759-443aaffe80c2.lovable.app-1781345134512.png" },
     ],
     links: [
       {
