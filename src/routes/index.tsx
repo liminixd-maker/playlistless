@@ -97,6 +97,7 @@ function Game() {
   const playerRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
   const stopAtRef = useRef<number>(STEPS[0]);
+  const startOffsetRef = useRef<number | null>(null);
 
   // Load config
   useEffect(() => {
