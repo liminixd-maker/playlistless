@@ -97,6 +97,7 @@ function Game() {
   const playerRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
   const stopAtRef = useRef<number>(STEPS[0]);
+  const startOffsetRef = useRef<number | null>(null);
 
   // Load config
   useEffect(() => {
@@ -160,6 +161,7 @@ function Game() {
     setFinished(null);
     setQuery("");
     setProgress(0);
+    startOffsetRef.current = null;
   }
 
   // Init YT player when track changes
@@ -203,13 +205,14 @@ function Game() {
   function tick() {
     if (!playerRef.current) return;
     const t = playerRef.current.getCurrentTime?.() || 0;
-    setProgress(t);
+    const offset = startOffsetRef.current ?? 0;
+    setProgress(Math.max(0, t - offset));
     if (t >= stopAtRef.current) {
       try {
         playerRef.current.pauseVideo();
-        playerRef.current.seekTo(0, true);
+        playerRef.current.seekTo(offset, true);
       } catch {}
-      setProgress(stopAtRef.current);
+      setProgress(stopAtRef.current - offset);
       setIsPlaying(false);
       return;
     }
@@ -224,9 +227,18 @@ function Game() {
     if (isPlaying) {
       playerRef.current.pauseVideo();
     } else {
-      stopAtRef.current = currentLimit;
+      if (startOffsetRef.current == null) {
+        let dur = 0;
+        try {
+          dur = playerRef.current.getDuration?.() || 0;
+        } catch {}
+        startOffsetRef.current =
+          dur > 0 ? Math.random() * (dur * 0.5) : Math.random() * 60;
+      }
+      const offset = startOffsetRef.current;
+      stopAtRef.current = offset + currentLimit;
       try {
-        playerRef.current.seekTo(0, true);
+        playerRef.current.seekTo(offset, true);
         playerRef.current.playVideo();
       } catch {}
     }
