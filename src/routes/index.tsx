@@ -161,6 +161,7 @@ function Game() {
     setFinished(null);
     setQuery("");
     setProgress(0);
+    startOffsetRef.current = null;
   }
 
   // Init YT player when track changes
