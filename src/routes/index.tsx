@@ -9,6 +9,7 @@ import {
   SkipForward,
   Share2,
   ArrowRight,
+  ListMusic,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
