@@ -454,6 +454,14 @@ function Game() {
         {/* Search */}
         {!finished && (
           <div className="mt-2 space-y-3">
+            {attempts.length >= 3 && current && (
+              <div className="text-center text-xs text-slate-400">
+                Pista — empieza por:{" "}
+                <span className="text-base font-bold text-yellow-400 tracking-wider">
+                  {(current.title.match(/[\p{L}\p{N}]/u)?.[0] || current.title[0] || "?").toUpperCase()}
+                </span>
+              </div>
+            )}
             <div className="relative">
               {showSuggest && suggestions.length > 0 && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-2xl max-h-64 overflow-y-auto z-10">
