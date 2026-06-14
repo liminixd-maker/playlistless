@@ -395,7 +395,10 @@ function Game() {
   }} />;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col font-sans">
+    <div
+      className="min-h-screen text-slate-100 flex flex-col font-sans"
+      style={{ backgroundColor: settings.bgColor }}
+    >
       {/* Hidden YT player */}
       <div style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0, pointerEvents: "none" }}>
         <div id="yt-hidden-player" />
@@ -410,6 +413,9 @@ function Game() {
             </button>
             <button onClick={() => setShowChangePlaylist(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Cambiar playlist" title="Cambiar playlist">
               <ListMusic size={22} />
+            </button>
+            <button onClick={() => setShowSettings(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Configuración" title="Configuración">
+              <SettingsIcon size={22} />
             </button>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">YT-GUESS-LESS</h1>
