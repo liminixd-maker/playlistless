@@ -121,6 +121,7 @@ function Game() {
   const [current, setCurrent] = useState<Track | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [finished, setFinished] = useState<null | "win" | "lose">(null);
+  const [revealStart, setRevealStart] = useState<number>(0);
 
   const [query, setQuery] = useState("");
   const [showSuggest, setShowSuggest] = useState(false);
@@ -326,11 +327,16 @@ function Game() {
   function finish(won: boolean, finalAttempts: Attempt[]) {
     setFinished(won ? "win" : "lose");
     setIsPlaying(false);
+    const offset = Math.max(0, Math.floor(startOffsetRef.current ?? 0));
+    setRevealStart(offset);
     if (playerRef.current) {
       try {
         playerRef.current.pauseVideo();
+        playerRef.current.destroy();
       } catch {}
+      playerRef.current = null;
     }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const triesUsed = finalAttempts.filter((a) => a.correct).length
       ? finalAttempts.findIndex((a) => a.correct) + 1
       : 6;
@@ -598,11 +604,15 @@ function Game() {
         {/* Result */}
         {finished && current && (
           <div className="mt-4 text-center bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
-            <img
-              src={`https://i.ytimg.com/vi/${current.id}/hqdefault.jpg`}
-              alt={current.title}
-              className="mx-auto rounded-lg w-64 max-w-full shadow-xl"
-            />
+            <div className="relative w-full max-w-xl mx-auto aspect-video rounded-lg overflow-hidden shadow-xl bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${current.id}?autoplay=1&start=${revealStart}&rel=0&modestbranding=1`}
+                title={current.title}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            </div>
             <div>
               <p className={`text-sm uppercase font-semibold tracking-wider ${finished === "win" ? "text-green-400" : "text-red-400"}`}>
                 {finished === "win" ? "¡Has acertado!" : "Fin del juego"}
