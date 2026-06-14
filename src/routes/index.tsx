@@ -345,9 +345,14 @@ function Game() {
       {/* Header */}
       <header className="relative px-4 py-4 border-b border-white/10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <button onClick={() => setShowHelp(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Ayuda">
-            <HelpCircle size={22} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowHelp(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Ayuda">
+              <HelpCircle size={22} />
+            </button>
+            <button onClick={() => setShowChangePlaylist(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Cambiar playlist" title="Cambiar playlist">
+              <ListMusic size={22} />
+            </button>
+          </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">YT-GUESS-LESS</h1>
           <button onClick={() => setShowStats(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Estadísticas">
             <BarChart3 size={22} />
