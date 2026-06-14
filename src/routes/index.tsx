@@ -847,3 +847,170 @@ function ChangePlaylistModal({
     </Modal>
   );
 }
+
+function SettingsModal({
+  settings,
+  onChange,
+  onClose,
+  onResetStats,
+  onResetConfig,
+}: {
+  settings: Settings;
+  onChange: (s: Settings) => void;
+  onClose: () => void;
+  onResetStats: () => void;
+  onResetConfig: () => void;
+}) {
+  function update<K extends keyof Settings>(k: K, v: Settings[K]) {
+    onChange({ ...settings, [k]: v });
+  }
+  return (
+    <Modal title="Configuración" onClose={onClose}>
+      <div className="space-y-5 text-sm">
+        {/* Volume */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-wider text-slate-400">Volumen</label>
+            <button
+              onClick={() => update("muted", !settings.muted)}
+              className="text-slate-300 hover:text-white"
+              aria-label="Silenciar"
+            >
+              {settings.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={settings.muted ? 0 : settings.volume}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                onChange({ ...settings, volume: v, muted: v === 0 });
+              }}
+              className="flex-1 accent-green-500"
+            />
+            <span className="w-10 text-right tabular-nums text-slate-400">
+              {settings.muted ? 0 : settings.volume}
+            </span>
+          </div>
+        </div>
+
+        {/* Background color */}
+        <div className="space-y-2">
+          <label className="text-xs uppercase tracking-wider text-slate-400">Color de fondo</label>
+          <div className="flex flex-wrap gap-2">
+            {BG_PRESETS.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => update("bgColor", c.value)}
+                className={`h-8 w-8 rounded-full border-2 transition ${
+                  settings.bgColor === c.value ? "border-white scale-110" : "border-slate-700"
+                }`}
+                style={{ backgroundColor: c.value }}
+                title={c.name}
+                aria-label={c.name}
+              />
+            ))}
+            <label className="h-8 w-8 rounded-full border-2 border-slate-700 overflow-hidden cursor-pointer relative">
+              <input
+                type="color"
+                value={settings.bgColor}
+                onChange={(e) => update("bgColor", e.target.value)}
+                className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+              />
+              <div className="w-full h-full bg-gradient-to-br from-pink-500 via-yellow-400 to-green-500" />
+            </label>
+          </div>
+        </div>
+
+        {/* Accent color */}
+        <div className="space-y-2">
+          <label className="text-xs uppercase tracking-wider text-slate-400">Color de acento</label>
+          <div className="flex flex-wrap gap-2">
+            {ACCENT_PRESETS.map((c) => (
+              <button
+                key={c}
+                onClick={() => update("accentColor", c)}
+                className={`h-8 w-8 rounded-full border-2 transition ${
+                  settings.accentColor === c ? "border-white scale-110" : "border-slate-700"
+                }`}
+                style={{ backgroundColor: c }}
+                aria-label={c}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Toggles */}
+        <div className="space-y-3 pt-2 border-t border-slate-800">
+          <Toggle
+            label="Pista (1ª letra al 3er fallo)"
+            value={settings.hintEnabled}
+            onChange={(v) => update("hintEnabled", v)}
+          />
+          <Toggle
+            label="Auto-reproducir al cambiar de canción"
+            value={settings.autoplayNext}
+            onChange={(v) => update("autoplayNext", v)}
+          />
+          <Toggle
+            label="Reducir animaciones"
+            value={settings.reduceMotion}
+            onChange={(v) => update("reduceMotion", v)}
+          />
+        </div>
+
+        {/* Danger zone */}
+        <div className="space-y-2 pt-3 border-t border-slate-800">
+          <label className="text-xs uppercase tracking-wider text-slate-400">Reiniciar</label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={onResetStats}
+              className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={14} /> Estadísticas
+            </button>
+            <button
+              onClick={onResetConfig}
+              className="flex-1 py-2 rounded-lg bg-red-900/60 hover:bg-red-800 border border-red-800 text-xs font-semibold flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={14} /> API Key + Playlist
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function Toggle({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      className="w-full flex items-center justify-between gap-3 text-left"
+    >
+      <span className="text-sm text-slate-200">{label}</span>
+      <span
+        className={`relative inline-flex h-6 w-11 rounded-full transition ${
+          value ? "bg-green-600" : "bg-slate-700"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
+            value ? "left-[22px]" : "left-0.5"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
