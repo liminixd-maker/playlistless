@@ -657,6 +657,23 @@ function Game() {
           }}
         />
       )}
+
+      {showSettings && (
+        <SettingsModal
+          settings={settings}
+          onChange={setSettings}
+          onClose={() => setShowSettings(false)}
+          onResetStats={() => {
+            localStorage.removeItem(LS_STATS);
+            setToast("Estadísticas reiniciadas");
+            setTimeout(() => setToast(null), 1800);
+          }}
+          onResetConfig={() => {
+            localStorage.removeItem(LS_KEY);
+            setConfig(null);
+          }}
+        />
+      )}
     </div>
   );
 }
