@@ -707,3 +707,61 @@ function Stat({ label, v }: { label: string; v: number | string }) {
     </div>
   );
 }
+
+function ChangePlaylistModal({
+  current,
+  onClose,
+  onSave,
+}: {
+  current: string;
+  onClose: () => void;
+  onSave: (pid: string) => void;
+}) {
+  const [value, setValue] = useState(current);
+  const [err, setErr] = useState("");
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    let pid = value.trim();
+    const m = pid.match(/[?&]list=([^&]+)/);
+    if (m) pid = m[1];
+    if (!pid) {
+      setErr("Introduce un Playlist ID o URL.");
+      return;
+    }
+    onSave(pid);
+  }
+  return (
+    <Modal title="Cambiar playlist" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-xs text-slate-400">
+          Se mantendrá tu API Key. Solo cambiará la playlist de origen.
+        </p>
+        <input
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setErr("");
+          }}
+          placeholder="PLxxxxxxxx o URL completa"
+          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500"
+        />
+        {err && <p className="text-red-400 text-xs">{err}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold"
+          >
+            Cargar playlist
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
