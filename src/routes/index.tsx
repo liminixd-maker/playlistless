@@ -327,11 +327,16 @@ function Game() {
   function finish(won: boolean, finalAttempts: Attempt[]) {
     setFinished(won ? "win" : "lose");
     setIsPlaying(false);
+    const offset = Math.max(0, Math.floor(startOffsetRef.current ?? 0));
+    setRevealStart(offset);
     if (playerRef.current) {
       try {
         playerRef.current.pauseVideo();
+        playerRef.current.destroy();
       } catch {}
+      playerRef.current = null;
     }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const triesUsed = finalAttempts.filter((a) => a.correct).length
       ? finalAttempts.findIndex((a) => a.correct) + 1
       : 6;
