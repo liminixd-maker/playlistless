@@ -93,6 +93,7 @@ function Game() {
 
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showChangePlaylist, setShowChangePlaylist] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const playerRef = useRef<any>(null);
