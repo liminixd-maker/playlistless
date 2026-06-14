@@ -604,12 +604,15 @@ function Game() {
         {/* Result */}
         {finished && current && (
           <div className="mt-4 text-center bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
-            <img
-              src={`https://i.ytimg.com/vi/${current.id}/hqdefault.jpg`}
-              alt={current.title}
-              className="mx-auto rounded-lg w-64 max-w-full shadow-xl"
-            />
-            <div>
+            <div className="relative w-full max-w-xl mx-auto aspect-video rounded-lg overflow-hidden shadow-xl bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${current.id}?autoplay=1&start=${revealStart}&rel=0&modestbranding=1`}
+                title={current.title}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            </div>
               <p className={`text-sm uppercase font-semibold tracking-wider ${finished === "win" ? "text-green-400" : "text-red-400"}`}>
                 {finished === "win" ? "¡Has acertado!" : "Fin del juego"}
               </p>
