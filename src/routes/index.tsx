@@ -240,7 +240,10 @@ function Game() {
         playerVars: { controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1 },
         events: {
           onReady: (e: any) => {
-            e.target.setVolume(80);
+            e.target.setVolume(settings.muted ? 0 : settings.volume);
+            if (settings.autoplayNext) {
+              setTimeout(() => handlePlayPause(), 200);
+            }
           },
           onStateChange: (e: any) => {
             if (e.data === window.YT.PlayerState.PLAYING) {
