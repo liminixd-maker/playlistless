@@ -613,6 +613,7 @@ function Game() {
                 className="absolute inset-0 w-full h-full border-0"
               />
             </div>
+            <div>
               <p className={`text-sm uppercase font-semibold tracking-wider ${finished === "win" ? "text-green-400" : "text-red-400"}`}>
                 {finished === "win" ? "¡Has acertado!" : "Fin del juego"}
               </p>
