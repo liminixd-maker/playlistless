@@ -10,6 +10,10 @@ import {
   Share2,
   ArrowRight,
   ListMusic,
+  Settings as SettingsIcon,
+  Volume2,
+  VolumeX,
+  RotateCcw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
