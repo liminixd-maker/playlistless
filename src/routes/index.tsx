@@ -33,6 +33,40 @@ const MAX = 16;
 const LS_KEY = "ytguessless.config";
 const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
+const LS_SETTINGS = "ytguessless.settings";
+
+type Settings = {
+  volume: number;
+  muted: boolean;
+  bgColor: string;
+  accentColor: string;
+  hintEnabled: boolean;
+  autoplayNext: boolean;
+  reduceMotion: boolean;
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  volume: 80,
+  muted: false,
+  bgColor: "#0f172a",
+  accentColor: "#22c55e",
+  hintEnabled: true,
+  autoplayNext: false,
+  reduceMotion: false,
+};
+
+const BG_PRESETS = [
+  { name: "Slate", value: "#0f172a" },
+  { name: "Negro", value: "#000000" },
+  { name: "Zinc", value: "#18181b" },
+  { name: "Indigo", value: "#1e1b4b" },
+  { name: "Esmeralda", value: "#022c22" },
+  { name: "Vino", value: "#2a0a14" },
+];
+
+const ACCENT_PRESETS = [
+  "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#f59e0b", "#ef4444",
+];
 
 type Track = { id: string; title: string };
 type Attempt = { type: "guess" | "skip"; correct: boolean; text?: string };
