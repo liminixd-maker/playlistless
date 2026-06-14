@@ -121,6 +121,7 @@ function Game() {
   const [current, setCurrent] = useState<Track | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [finished, setFinished] = useState<null | "win" | "lose">(null);
+  const [revealStart, setRevealStart] = useState<number>(0);
 
   const [query, setQuery] = useState("");
   const [showSuggest, setShowSuggest] = useState(false);
