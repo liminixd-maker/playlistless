@@ -519,7 +519,7 @@ function Game() {
         {/* Search */}
         {!finished && (
           <div className="mt-2 space-y-3">
-            {attempts.length >= 3 && current && (
+            {settings.hintEnabled && attempts.length >= 3 && current && (
               <div className="text-center text-xs text-slate-400">
                 Pista — empieza por:{" "}
                 <span className="text-base font-bold text-yellow-400 tracking-wider">
