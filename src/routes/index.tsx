@@ -9,6 +9,7 @@ import {
   SkipForward,
   Share2,
   ArrowRight,
+  ListMusic,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -92,6 +93,7 @@ function Game() {
 
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showChangePlaylist, setShowChangePlaylist] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const playerRef = useRef<any>(null);
@@ -343,9 +345,14 @@ function Game() {
       {/* Header */}
       <header className="relative px-4 py-4 border-b border-white/10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <button onClick={() => setShowHelp(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Ayuda">
-            <HelpCircle size={22} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowHelp(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Ayuda">
+              <HelpCircle size={22} />
+            </button>
+            <button onClick={() => setShowChangePlaylist(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Cambiar playlist" title="Cambiar playlist">
+              <ListMusic size={22} />
+            </button>
+          </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">YT-GUESS-LESS</h1>
           <button onClick={() => setShowStats(true)} className="p-2 text-slate-300 hover:text-white transition" aria-label="Estadísticas">
             <BarChart3 size={22} />
@@ -447,6 +454,14 @@ function Game() {
         {/* Search */}
         {!finished && (
           <div className="mt-2 space-y-3">
+            {attempts.length >= 3 && current && (
+              <div className="text-center text-xs text-slate-400">
+                Pista — empieza por:{" "}
+                <span className="text-base font-bold text-yellow-400 tracking-wider">
+                  {(current.title.match(/[\p{L}\p{N}]/u)?.[0] || current.title[0] || "?").toUpperCase()}
+                </span>
+              </div>
+            )}
             <div className="relative">
               {showSuggest && suggestions.length > 0 && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-2xl max-h-64 overflow-y-auto z-10">
@@ -564,6 +579,19 @@ function Game() {
       </Modal>}
 
       {showStats && <StatsModal onClose={() => setShowStats(false)} />}
+
+      {showChangePlaylist && config && (
+        <ChangePlaylistModal
+          current={config.playlistId}
+          onClose={() => setShowChangePlaylist(false)}
+          onSave={(pid) => {
+            const next = { ...config, playlistId: pid };
+            localStorage.setItem(LS_KEY, JSON.stringify(next));
+            setConfig(next);
+            setShowChangePlaylist(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -677,5 +705,63 @@ function Stat({ label, v }: { label: string; v: number | string }) {
       <div className="text-2xl font-bold">{v}</div>
       <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
     </div>
+  );
+}
+
+function ChangePlaylistModal({
+  current,
+  onClose,
+  onSave,
+}: {
+  current: string;
+  onClose: () => void;
+  onSave: (pid: string) => void;
+}) {
+  const [value, setValue] = useState(current);
+  const [err, setErr] = useState("");
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    let pid = value.trim();
+    const m = pid.match(/[?&]list=([^&]+)/);
+    if (m) pid = m[1];
+    if (!pid) {
+      setErr("Introduce un Playlist ID o URL.");
+      return;
+    }
+    onSave(pid);
+  }
+  return (
+    <Modal title="Cambiar playlist" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-xs text-slate-400">
+          Se mantendrá tu API Key. Solo cambiará la playlist de origen.
+        </p>
+        <input
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setErr("");
+          }}
+          placeholder="PLxxxxxxxx o URL completa"
+          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500"
+        />
+        {err && <p className="text-red-400 text-xs">{err}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold"
+          >
+            Cargar playlist
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
