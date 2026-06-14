@@ -141,7 +141,7 @@ function Game() {
   const stopAtRef = useRef<number>(STEPS[0]);
   const startOffsetRef = useRef<number | null>(null);
 
-  // Load config
+  // Load config + settings
   useEffect(() => {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
@@ -149,7 +149,23 @@ function Game() {
         setConfig(JSON.parse(raw));
       } catch {}
     }
+    const rawS = localStorage.getItem(LS_SETTINGS);
+    if (rawS) {
+      try {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawS) });
+      } catch {}
+    }
   }, []);
+
+  // Persist settings
+  useEffect(() => {
+    localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+    if (playerRef.current) {
+      try {
+        playerRef.current.setVolume(settings.muted ? 0 : settings.volume);
+      } catch {}
+    }
+  }, [settings]);
 
   // Fetch playlist
   useEffect(() => {
