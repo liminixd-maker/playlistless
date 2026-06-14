@@ -579,6 +579,19 @@ function Game() {
       </Modal>}
 
       {showStats && <StatsModal onClose={() => setShowStats(false)} />}
+
+      {showChangePlaylist && config && (
+        <ChangePlaylistModal
+          current={config.playlistId}
+          onClose={() => setShowChangePlaylist(false)}
+          onSave={(pid) => {
+            const next = { ...config, playlistId: pid };
+            localStorage.setItem(LS_KEY, JSON.stringify(next));
+            setConfig(next);
+            setShowChangePlaylist(false);
+          }}
+        />
+      )}
     </div>
   );
 }
