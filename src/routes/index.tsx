@@ -492,8 +492,8 @@ function Game() {
               <div key={i} className="absolute top-0 bottom-0 w-px bg-slate-700" style={{ left: `${(s / MAX) * 100}%` }} />
             ))}
             <div
-              className="absolute top-0 bottom-0 left-0 bg-green-500 transition-[width] duration-100"
-              style={{ width: `${Math.min((progress / MAX) * 100, 100)}%` }}
+              className={`absolute top-0 bottom-0 left-0 ${settings.reduceMotion ? "" : "transition-[width] duration-100"}`}
+              style={{ width: `${Math.min((progress / MAX) * 100, 100)}%`, backgroundColor: settings.accentColor }}
             />
             <div
               className="absolute top-0 bottom-0 left-0 bg-white/10"
