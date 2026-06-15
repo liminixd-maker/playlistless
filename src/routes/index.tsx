@@ -984,10 +984,37 @@ function SettingsModal({
         {/* Toggles */}
         <div className="space-y-3 pt-2 border-t border-slate-800">
           <Toggle
-            label="Pista (1ª letra al 3er fallo)"
+            label="Pistas activadas (master)"
             value={settings.hintEnabled}
             onChange={(v) => update("hintEnabled", v)}
           />
+          <div className="pl-3 border-l border-slate-800 space-y-3">
+            <Toggle
+              label="1ª letra del título (3er fallo)"
+              value={settings.hintFirstLetter}
+              onChange={(v) => update("hintFirstLetter", v)}
+            />
+            <Toggle
+              label="2ª letra del título (4º fallo)"
+              value={settings.hintSecondLetter}
+              onChange={(v) => update("hintSecondLetter", v)}
+            />
+            <Toggle
+              label="Artista / canal (5º fallo)"
+              value={settings.hintChannel}
+              onChange={(v) => update("hintChannel", v)}
+            />
+            <Toggle
+              label="Nº de palabras del título (5º fallo)"
+              value={settings.hintWordCount}
+              onChange={(v) => update("hintWordCount", v)}
+            />
+            <Toggle
+              label="Longitud del título en letras (5º fallo)"
+              value={settings.hintTitleLength}
+              onChange={(v) => update("hintTitleLength", v)}
+            />
+          </div>
           <Toggle
             label="Auto-reproducir al cambiar de canción"
             value={settings.autoplayNext}
@@ -999,6 +1026,7 @@ function SettingsModal({
             onChange={(v) => update("reduceMotion", v)}
           />
         </div>
+
 
         {/* Danger zone */}
         <div className="space-y-2 pt-3 border-t border-slate-800">
