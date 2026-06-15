@@ -28,8 +28,8 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-const STEPS = [1, 2, 4, 7, 11, 16];
-const MAX = 16;
+const STEPS = [1, 2, 10, 19, 29, 40];
+const MAX = 40;
 const LS_KEY = "ytguessless.config";
 const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
@@ -41,6 +41,11 @@ type Settings = {
   bgColor: string;
   accentColor: string;
   hintEnabled: boolean;
+  hintFirstLetter: boolean;
+  hintSecondLetter: boolean;
+  hintChannel: boolean;
+  hintWordCount: boolean;
+  hintTitleLength: boolean;
   autoplayNext: boolean;
   reduceMotion: boolean;
 };
@@ -51,6 +56,11 @@ const DEFAULT_SETTINGS: Settings = {
   bgColor: "#0f172a",
   accentColor: "#22c55e",
   hintEnabled: true,
+  hintFirstLetter: true,
+  hintSecondLetter: true,
+  hintChannel: true,
+  hintWordCount: true,
+  hintTitleLength: true,
   autoplayNext: false,
   reduceMotion: false,
 };
@@ -68,7 +78,7 @@ const ACCENT_PRESETS = [
   "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#f59e0b", "#ef4444",
 ];
 
-type Track = { id: string; title: string };
+type Track = { id: string; title: string; channel?: string };
 type Attempt = { type: "guess" | "skip"; correct: boolean; text?: string };
 
 declare global {
@@ -192,7 +202,8 @@ function Game() {
             const id = it.contentDetails?.videoId;
             const title = it.snippet?.title;
             if (id && title && title !== "Deleted video" && title !== "Private video") {
-              all.push({ id, title });
+              const channel = (it.snippet?.videoOwnerChannelTitle || it.snippet?.channelTitle || "").replace(/\s*-\s*Topic\s*$/i, "").trim();
+              all.push({ id, title, channel });
             }
           }
           pageToken = data.nextPageToken || "";
@@ -525,14 +536,31 @@ function Game() {
         {/* Search */}
         {!finished && (
           <div className="mt-2 space-y-3">
-            {settings.hintEnabled && attempts.length >= 3 && current && (
-              <div className="text-center text-xs text-slate-400">
-                Pista — empieza por:{" "}
-                <span className="text-base font-bold text-yellow-400 tracking-wider">
-                  {(current.title.match(/[\p{L}\p{N}]/u)?.[0] || current.title[0] || "?").toUpperCase()}
-                </span>
-              </div>
-            )}
+            {settings.hintEnabled && current && (() => {
+              const letters = (current.title.match(/[\p{L}\p{N}]/gu) || []) as string[];
+              const words = current.title.replace(/[\(\[\{].*?[\)\]\}]/g, " ").split(/\s+/).filter((w) => w.match(/[\p{L}\p{N}]/u));
+              const hints: { when: number; label: string; value: string; enabled: boolean }[] = [
+                { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
+                { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
+                { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
+              ].filter((h) => h.enabled && attempts.length >= h.when);
+              if (!hints.length) return null;
+              return (
+                <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 space-y-1">
+                  <div className="text-[10px] uppercase tracking-wider text-yellow-500/70 text-center">Pistas</div>
+                  <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-slate-300">
+                    {hints.map((h, i) => (
+                      <div key={i}>
+                        {h.label}:{" "}
+                        <span className="font-bold text-yellow-400 tracking-wider">{h.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div className="relative">
               {showSuggest && suggestions.length > 0 && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-2xl max-h-64 overflow-y-auto z-10">
@@ -956,10 +984,37 @@ function SettingsModal({
         {/* Toggles */}
         <div className="space-y-3 pt-2 border-t border-slate-800">
           <Toggle
-            label="Pista (1ª letra al 3er fallo)"
+            label="Pistas activadas (master)"
             value={settings.hintEnabled}
             onChange={(v) => update("hintEnabled", v)}
           />
+          <div className="pl-3 border-l border-slate-800 space-y-3">
+            <Toggle
+              label="1ª letra del título (3er fallo)"
+              value={settings.hintFirstLetter}
+              onChange={(v) => update("hintFirstLetter", v)}
+            />
+            <Toggle
+              label="2ª letra del título (4º fallo)"
+              value={settings.hintSecondLetter}
+              onChange={(v) => update("hintSecondLetter", v)}
+            />
+            <Toggle
+              label="Artista / canal (5º fallo)"
+              value={settings.hintChannel}
+              onChange={(v) => update("hintChannel", v)}
+            />
+            <Toggle
+              label="Nº de palabras del título (5º fallo)"
+              value={settings.hintWordCount}
+              onChange={(v) => update("hintWordCount", v)}
+            />
+            <Toggle
+              label="Longitud del título en letras (5º fallo)"
+              value={settings.hintTitleLength}
+              onChange={(v) => update("hintTitleLength", v)}
+            />
+          </div>
           <Toggle
             label="Auto-reproducir al cambiar de canción"
             value={settings.autoplayNext}
@@ -971,6 +1026,7 @@ function SettingsModal({
             onChange={(v) => update("reduceMotion", v)}
           />
         </div>
+
 
         {/* Danger zone */}
         <div className="space-y-2 pt-3 border-t border-slate-800">
