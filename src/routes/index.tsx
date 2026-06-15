@@ -78,7 +78,7 @@ const ACCENT_PRESETS = [
   "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#f59e0b", "#ef4444",
 ];
 
-type Track = { id: string; title: string };
+type Track = { id: string; title: string; channel?: string };
 type Attempt = { type: "guess" | "skip"; correct: boolean; text?: string };
 
 declare global {
