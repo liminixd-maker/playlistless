@@ -28,8 +28,8 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-const STEPS = [1, 2, 4, 7, 11, 16];
-const MAX = 16;
+const STEPS = [1, 2, 10, 19, 29, 40];
+const MAX = 40;
 const LS_KEY = "ytguessless.config";
 const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
@@ -41,6 +41,11 @@ type Settings = {
   bgColor: string;
   accentColor: string;
   hintEnabled: boolean;
+  hintFirstLetter: boolean;
+  hintSecondLetter: boolean;
+  hintChannel: boolean;
+  hintWordCount: boolean;
+  hintTitleLength: boolean;
   autoplayNext: boolean;
   reduceMotion: boolean;
 };
@@ -51,6 +56,11 @@ const DEFAULT_SETTINGS: Settings = {
   bgColor: "#0f172a",
   accentColor: "#22c55e",
   hintEnabled: true,
+  hintFirstLetter: true,
+  hintSecondLetter: true,
+  hintChannel: true,
+  hintWordCount: true,
+  hintTitleLength: true,
   autoplayNext: false,
   reduceMotion: false,
 };
