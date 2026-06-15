@@ -202,7 +202,8 @@ function Game() {
             const id = it.contentDetails?.videoId;
             const title = it.snippet?.title;
             if (id && title && title !== "Deleted video" && title !== "Private video") {
-              all.push({ id, title });
+              const channel = (it.snippet?.videoOwnerChannelTitle || it.snippet?.channelTitle || "").replace(/\s*-\s*Topic\s*$/i, "").trim();
+              all.push({ id, title, channel });
             }
           }
           pageToken = data.nextPageToken || "";
