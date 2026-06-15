@@ -28,8 +28,8 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-const STEPS = [1, 2, 10, 19, 29, 40];
-const MAX = 40;
+const STEPS = [1, 2, 10, 19, 29, 60];
+const MAX = 60;
 const LS_KEY = "ytguessless.config";
 const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
@@ -503,18 +503,50 @@ function Game() {
 
         {/* Timeline */}
         <div className="space-y-3">
-          <div className="relative h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+          <div
+            className="relative h-3 w-full bg-slate-800 rounded-full overflow-hidden cursor-pointer select-none"
+            onPointerDown={(e) => {
+              if (!playerRef.current || finished) return;
+              const el = e.currentTarget;
+              el.setPointerCapture(e.pointerId);
+              const seek = (clientX: number) => {
+                const rect = el.getBoundingClientRect();
+                const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+                const target = Math.min(pct * MAX, currentLimit);
+                const offset = startOffsetRef.current ?? 0;
+                try {
+                  playerRef.current.seekTo(offset + target, true);
+                } catch {}
+                setProgress(target);
+              };
+              seek(e.clientX);
+              const move = (ev: PointerEvent) => seek(ev.clientX);
+              const up = (ev: PointerEvent) => {
+                seek(ev.clientX);
+                el.removeEventListener("pointermove", move);
+                el.removeEventListener("pointerup", up);
+                el.removeEventListener("pointercancel", up);
+              };
+              el.addEventListener("pointermove", move);
+              el.addEventListener("pointerup", up);
+              el.addEventListener("pointercancel", up);
+            }}
+          >
             {/* segment markers */}
             {STEPS.slice(0, -1).map((s, i) => (
-              <div key={i} className="absolute top-0 bottom-0 w-px bg-slate-700" style={{ left: `${(s / MAX) * 100}%` }} />
+              <div key={i} className="absolute top-0 bottom-0 w-px bg-slate-700 pointer-events-none" style={{ left: `${(s / MAX) * 100}%` }} />
             ))}
             <div
-              className={`absolute top-0 bottom-0 left-0 ${settings.reduceMotion ? "" : "transition-[width] duration-100"}`}
+              className="absolute top-0 bottom-0 left-0 bg-white/10 pointer-events-none"
+              style={{ width: `${(currentLimit / MAX) * 100}%` }}
+            />
+            <div
+              className={`absolute top-0 bottom-0 left-0 pointer-events-none ${settings.reduceMotion ? "" : "transition-[width] duration-100"}`}
               style={{ width: `${Math.min((progress / MAX) * 100, 100)}%`, backgroundColor: settings.accentColor }}
             />
             <div
-              className="absolute top-0 bottom-0 left-0 bg-white/10"
-              style={{ width: `${(currentLimit / MAX) * 100}%` }}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white shadow pointer-events-none"
+              style={{ left: `${Math.min((progress / MAX) * 100, 100)}%` }}
             />
           </div>
 
