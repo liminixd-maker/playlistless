@@ -28,12 +28,31 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-const STEPS = [1, 2, 10, 19, 29, 60];
-const MAX = 60;
+const STEPS_CLASSIC = [1, 2, 10, 19, 29, 60];
+const STEPS_FX = [60, 60, 60];
 const LS_KEY = "ytguessless.config";
 const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
 const LS_SETTINGS = "ytguessless.settings";
+const LS_MODE = "ytguessless.mode";
+
+type Mode = "classic" | "fx";
+
+type FxEffect = {
+  id: string;
+  name: string;
+  rate: number; // YT supports 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2
+  emoji: string;
+};
+
+const FX_EFFECTS: FxEffect[] = [
+  { id: "nightcore", name: "Nightcore", rate: 1.5, emoji: "⚡" },
+  { id: "speedup", name: "Speed Up", rate: 1.25, emoji: "🚀" },
+  { id: "chipmunk", name: "Chipmunk", rate: 1.75, emoji: "🐿️" },
+  { id: "slowed", name: "Slowed", rate: 0.75, emoji: "🌙" },
+  { id: "screwed", name: "Chopped & Screwed", rate: 0.5, emoji: "🍫" },
+  { id: "vaporwave", name: "Vaporwave", rate: 0.25, emoji: "🌴" },
+];
 
 type Settings = {
   volume: number;
