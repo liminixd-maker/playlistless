@@ -448,11 +448,12 @@ function Game() {
   }, [query, tracks]);
 
   function shareText() {
+    const tag = mode === "fx" ? `FX${currentEffect ? " " + currentEffect.name : ""}` : "Classic";
     const sq = attempts
       .map((a) => (a.correct ? "🟩" : a.type === "skip" ? "⬛" : "🟥"))
-      .concat(Array(6 - attempts.length).fill("⬜"))
+      .concat(Array(Math.max(0, maxAttempts - attempts.length)).fill("⬜"))
       .join("");
-    return `YT-Guessless ${finished === "win" ? attempts.length + "/6" : "X/6"}\n${sq}`;
+    return `YT-Guessless · ${tag} ${finished === "win" ? attempts.length + "/" + maxAttempts : "X/" + maxAttempts}\n${sq}`;
   }
 
   async function copyShare() {
