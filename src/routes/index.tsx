@@ -735,7 +735,9 @@ function Game() {
                 onClick={skip}
                 className="flex-1 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold transition"
               >
-                SALTAR (+{attemptIndex < 5 ? STEPS[attemptIndex + 1] - STEPS[attemptIndex] : 0}s)
+                {mode === "fx"
+                  ? "SALTAR"
+                  : `SALTAR (+${attemptIndex < maxAttempts - 1 ? STEPS[attemptIndex + 1] - STEPS[attemptIndex] : 0}s)`}
               </button>
               <button
                 onClick={submitGuess}
