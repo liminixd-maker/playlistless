@@ -263,7 +263,18 @@ function Game() {
     setQuery("");
     setProgress(0);
     startOffsetRef.current = null;
+    if (mode === "fx") {
+      setCurrentEffect(FX_EFFECTS[Math.floor(Math.random() * FX_EFFECTS.length)]);
+    } else {
+      setCurrentEffect(null);
+    }
   }
+
+  // Re-pick when switching mode (so effect/limits apply cleanly)
+  useEffect(() => {
+    if (tracks.length) pickRandom(tracks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   // Init YT player when track changes
   useEffect(() => {
