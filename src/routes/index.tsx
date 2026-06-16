@@ -499,7 +499,29 @@ function Game() {
             <BarChart3 size={22} />
           </button>
         </div>
+        <div className="max-w-2xl mx-auto mt-3 flex items-center justify-center gap-3">
+          <label className="text-[10px] uppercase tracking-wider text-slate-400">Modo</label>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as Mode)}
+            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-slate-500"
+          >
+            <option value="classic">Clásico · 6 intentos</option>
+            <option value="fx">FX · 3 intentos · 60s con efecto</option>
+          </select>
+          {mode === "fx" && currentEffect && !finished && (
+            <span
+              className="px-2 py-1 rounded-md text-[11px] font-semibold border"
+              style={{ borderColor: settings.accentColor, color: settings.accentColor }}
+              title={`Velocidad x${currentEffect.rate}`}
+            >
+              {currentEffect.emoji} {currentEffect.name}
+            </span>
+          )}
+        </div>
       </header>
+
+
 
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6">
         {loadingTracks && <p className="text-center text-slate-400">Cargando playlist…</p>}
