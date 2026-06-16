@@ -295,6 +295,9 @@ function Game() {
         events: {
           onReady: (e: any) => {
             e.target.setVolume(settings.muted ? 0 : settings.volume);
+            try {
+              e.target.setPlaybackRate(currentEffect ? currentEffect.rate : 1);
+            } catch {}
             if (settings.autoplayNext) {
               setTimeout(() => handlePlayPause(), 200);
             }
