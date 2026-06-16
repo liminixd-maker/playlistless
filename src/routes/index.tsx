@@ -444,7 +444,7 @@ function Game() {
       if (score >= 0) scored.push({ t, score });
     }
     scored.sort((a, b) => a.score - b.score || a.t.title.length - b.t.title.length);
-    return scored.slice(0, 14).map((s) => s.t);
+    return scored.slice(0, 24).map((s) => s.t);
   }, [query, tracks]);
 
   function shareText() {
