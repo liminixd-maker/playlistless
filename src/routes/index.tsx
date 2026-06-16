@@ -28,12 +28,31 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-const STEPS = [1, 2, 10, 19, 29, 60];
-const MAX = 60;
+const STEPS_CLASSIC = [1, 2, 10, 19, 29, 60];
+const STEPS_FX = [60, 60, 60];
 const LS_KEY = "ytguessless.config";
 const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
 const LS_SETTINGS = "ytguessless.settings";
+const LS_MODE = "ytguessless.mode";
+
+type Mode = "classic" | "fx";
+
+type FxEffect = {
+  id: string;
+  name: string;
+  rate: number; // YT supports 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2
+  emoji: string;
+};
+
+const FX_EFFECTS: FxEffect[] = [
+  { id: "nightcore", name: "Nightcore", rate: 1.5, emoji: "⚡" },
+  { id: "speedup", name: "Speed Up", rate: 1.25, emoji: "🚀" },
+  { id: "chipmunk", name: "Chipmunk", rate: 1.75, emoji: "🐿️" },
+  { id: "slowed", name: "Slowed", rate: 0.75, emoji: "🌙" },
+  { id: "screwed", name: "Chopped & Screwed", rate: 0.5, emoji: "🍫" },
+  { id: "vaporwave", name: "Vaporwave", rate: 0.25, emoji: "🌴" },
+];
 
 type Settings = {
   volume: number;
@@ -146,6 +165,12 @@ function Game() {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [toast, setToast] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("classic");
+  const [currentEffect, setCurrentEffect] = useState<FxEffect | null>(null);
+
+  const STEPS = mode === "fx" ? STEPS_FX : STEPS_CLASSIC;
+  const MAX = STEPS[STEPS.length - 1];
+  const maxAttempts = STEPS.length;
 
   const playerRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
@@ -166,7 +191,13 @@ function Game() {
         setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawS) });
       } catch {}
     }
+    const rawM = localStorage.getItem(LS_MODE);
+    if (rawM === "classic" || rawM === "fx") setMode(rawM);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LS_MODE, mode);
+  }, [mode]);
 
   // Persist settings
   useEffect(() => {
@@ -232,7 +263,18 @@ function Game() {
     setQuery("");
     setProgress(0);
     startOffsetRef.current = null;
+    if (mode === "fx") {
+      setCurrentEffect(FX_EFFECTS[Math.floor(Math.random() * FX_EFFECTS.length)]);
+    } else {
+      setCurrentEffect(null);
+    }
   }
+
+  // Re-pick when switching mode (so effect/limits apply cleanly)
+  useEffect(() => {
+    if (tracks.length) pickRandom(tracks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   // Init YT player when track changes
   useEffect(() => {
@@ -253,6 +295,9 @@ function Game() {
         events: {
           onReady: (e: any) => {
             e.target.setVolume(settings.muted ? 0 : settings.volume);
+            try {
+              e.target.setPlaybackRate(currentEffect ? currentEffect.rate : 1);
+            } catch {}
             if (settings.autoplayNext) {
               setTimeout(() => handlePlayPause(), 200);
             }
@@ -311,6 +356,7 @@ function Game() {
       const offset = startOffsetRef.current;
       stopAtRef.current = offset + currentLimit;
       try {
+        playerRef.current.setPlaybackRate(currentEffect ? currentEffect.rate : 1);
         playerRef.current.seekTo(offset, true);
         playerRef.current.playVideo();
       } catch {}
@@ -350,7 +396,7 @@ function Game() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const triesUsed = finalAttempts.filter((a) => a.correct).length
       ? finalAttempts.findIndex((a) => a.correct) + 1
-      : 6;
+      : maxAttempts;
     recordStats(won, triesUsed);
     // Persist round result for share
     localStorage.setItem(
@@ -368,7 +414,7 @@ function Game() {
     setShowSuggest(false);
     if (correct) {
       finish(true, next);
-    } else if (next.length >= 6) {
+    } else if (next.length >= maxAttempts) {
       finish(false, next);
     }
   }
@@ -378,23 +424,36 @@ function Game() {
     const next: Attempt[] = [...attempts, { type: "skip", correct: false }];
     setAttempts(next);
     setQuery("");
-    if (next.length >= 6) finish(false, next);
+    if (next.length >= maxAttempts) finish(false, next);
   }
 
   const suggestions = useMemo(() => {
     if (!query.trim()) return [];
     const q = normalize(query);
-    return tracks
-      .filter((t) => normalize(t.title).includes(q))
-      .slice(0, 8);
+    const scored: { t: Track; score: number }[] = [];
+    for (const t of tracks) {
+      const n = normalize(t.title);
+      let score = -1;
+      if (n.startsWith(q)) score = 0;
+      else {
+        // word-start match
+        const words = n.split(" ");
+        if (words.some((w) => w.startsWith(q))) score = 1;
+        else if (n.includes(q)) score = 2;
+      }
+      if (score >= 0) scored.push({ t, score });
+    }
+    scored.sort((a, b) => a.score - b.score || a.t.title.length - b.t.title.length);
+    return scored.slice(0, 14).map((s) => s.t);
   }, [query, tracks]);
 
   function shareText() {
+    const tag = mode === "fx" ? `FX${currentEffect ? " " + currentEffect.name : ""}` : "Classic";
     const sq = attempts
       .map((a) => (a.correct ? "🟩" : a.type === "skip" ? "⬛" : "🟥"))
-      .concat(Array(6 - attempts.length).fill("⬜"))
+      .concat(Array(Math.max(0, maxAttempts - attempts.length)).fill("⬜"))
       .join("");
-    return `YT-Guessless ${finished === "win" ? attempts.length + "/6" : "X/6"}\n${sq}`;
+    return `YT-Guessless · ${tag} ${finished === "win" ? attempts.length + "/" + maxAttempts : "X/" + maxAttempts}\n${sq}`;
   }
 
   async function copyShare() {
@@ -440,7 +499,29 @@ function Game() {
             <BarChart3 size={22} />
           </button>
         </div>
+        <div className="max-w-2xl mx-auto mt-3 flex items-center justify-center gap-3">
+          <label className="text-[10px] uppercase tracking-wider text-slate-400">Modo</label>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as Mode)}
+            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-slate-500"
+          >
+            <option value="classic">Clásico · 6 intentos</option>
+            <option value="fx">FX · 3 intentos · 60s con efecto</option>
+          </select>
+          {mode === "fx" && currentEffect && !finished && (
+            <span
+              className="px-2 py-1 rounded-md text-[11px] font-semibold border"
+              style={{ borderColor: settings.accentColor, color: settings.accentColor }}
+              title={`Velocidad x${currentEffect.rate}`}
+            >
+              {currentEffect.emoji} {currentEffect.name}
+            </span>
+          )}
+        </div>
       </header>
+
+
 
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6">
         {loadingTracks && <p className="text-center text-slate-400">Cargando playlist…</p>}
@@ -571,13 +652,19 @@ function Game() {
             {settings.hintEnabled && current && (() => {
               const letters = (current.title.match(/[\p{L}\p{N}]/gu) || []) as string[];
               const words = current.title.replace(/[\(\[\{].*?[\)\]\}]/g, " ").split(/\s+/).filter((w) => w.match(/[\p{L}\p{N}]/u));
-              const hints: { when: number; label: string; value: string; enabled: boolean }[] = [
-                { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
-                { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
-                { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
-                { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
-                { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
-              ].filter((h) => h.enabled && attempts.length >= h.when);
+              const isFx = mode === "fx";
+              const hints: { when: number; label: string; value: string; enabled: boolean }[] = isFx
+                ? [
+                    { when: 1, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                    { when: 2, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                  ].filter((h) => h.enabled && attempts.length >= h.when)
+                : [
+                    { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                    { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
+                    { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
+                    { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                    { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
+                  ].filter((h) => h.enabled && attempts.length >= h.when);
               if (!hints.length) return null;
               return (
                 <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 space-y-1">
@@ -648,7 +735,9 @@ function Game() {
                 onClick={skip}
                 className="flex-1 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold transition"
               >
-                SALTAR (+{attemptIndex < 5 ? STEPS[attemptIndex + 1] - STEPS[attemptIndex] : 0}s)
+                {mode === "fx"
+                  ? "SALTAR"
+                  : `SALTAR (+${attemptIndex < maxAttempts - 1 ? STEPS[attemptIndex + 1] - STEPS[attemptIndex] : 0}s)`}
               </button>
               <button
                 onClick={submitGuess}
