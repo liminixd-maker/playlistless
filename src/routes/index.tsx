@@ -652,13 +652,19 @@ function Game() {
             {settings.hintEnabled && current && (() => {
               const letters = (current.title.match(/[\p{L}\p{N}]/gu) || []) as string[];
               const words = current.title.replace(/[\(\[\{].*?[\)\]\}]/g, " ").split(/\s+/).filter((w) => w.match(/[\p{L}\p{N}]/u));
-              const hints: { when: number; label: string; value: string; enabled: boolean }[] = [
-                { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
-                { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
-                { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
-                { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
-                { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
-              ].filter((h) => h.enabled && attempts.length >= h.when);
+              const isFx = mode === "fx";
+              const hints: { when: number; label: string; value: string; enabled: boolean }[] = isFx
+                ? [
+                    { when: 1, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                    { when: 2, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                  ].filter((h) => h.enabled && attempts.length >= h.when)
+                : [
+                    { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                    { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
+                    { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
+                    { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                    { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
+                  ].filter((h) => h.enabled && attempts.length >= h.when);
               if (!hints.length) return null;
               return (
                 <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 space-y-1">
