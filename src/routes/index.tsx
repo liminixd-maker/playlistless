@@ -396,7 +396,7 @@ function Game() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const triesUsed = finalAttempts.filter((a) => a.correct).length
       ? finalAttempts.findIndex((a) => a.correct) + 1
-      : 6;
+      : maxAttempts;
     recordStats(won, triesUsed);
     // Persist round result for share
     localStorage.setItem(
@@ -414,7 +414,7 @@ function Game() {
     setShowSuggest(false);
     if (correct) {
       finish(true, next);
-    } else if (next.length >= 6) {
+    } else if (next.length >= maxAttempts) {
       finish(false, next);
     }
   }
@@ -424,15 +424,27 @@ function Game() {
     const next: Attempt[] = [...attempts, { type: "skip", correct: false }];
     setAttempts(next);
     setQuery("");
-    if (next.length >= 6) finish(false, next);
+    if (next.length >= maxAttempts) finish(false, next);
   }
 
   const suggestions = useMemo(() => {
     if (!query.trim()) return [];
     const q = normalize(query);
-    return tracks
-      .filter((t) => normalize(t.title).includes(q))
-      .slice(0, 8);
+    const scored: { t: Track; score: number }[] = [];
+    for (const t of tracks) {
+      const n = normalize(t.title);
+      let score = -1;
+      if (n.startsWith(q)) score = 0;
+      else {
+        // word-start match
+        const words = n.split(" ");
+        if (words.some((w) => w.startsWith(q))) score = 1;
+        else if (n.includes(q)) score = 2;
+      }
+      if (score >= 0) scored.push({ t, score });
+    }
+    scored.sort((a, b) => a.score - b.score || a.t.title.length - b.t.title.length);
+    return scored.slice(0, 14).map((s) => s.t);
   }, [query, tracks]);
 
   function shareText() {
