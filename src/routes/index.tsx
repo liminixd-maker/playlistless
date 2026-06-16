@@ -165,6 +165,12 @@ function Game() {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [toast, setToast] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("classic");
+  const [currentEffect, setCurrentEffect] = useState<FxEffect | null>(null);
+
+  const STEPS = mode === "fx" ? STEPS_FX : STEPS_CLASSIC;
+  const MAX = STEPS[STEPS.length - 1];
+  const maxAttempts = STEPS.length;
 
   const playerRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
