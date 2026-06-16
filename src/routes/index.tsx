@@ -356,6 +356,7 @@ function Game() {
       const offset = startOffsetRef.current;
       stopAtRef.current = offset + currentLimit;
       try {
+        playerRef.current.setPlaybackRate(currentEffect ? currentEffect.rate : 1);
         playerRef.current.seekTo(offset, true);
         playerRef.current.playVideo();
       } catch {}
