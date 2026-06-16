@@ -190,6 +190,7 @@ function Game() {
       try {
         setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawS) });
       } catch {}
+    }
     const rawM = localStorage.getItem(LS_MODE);
     if (rawM === "classic" || rawM === "fx") setMode(rawM);
   }, []);
