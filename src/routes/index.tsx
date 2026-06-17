@@ -688,13 +688,17 @@ function Game() {
                     { when: 1, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
                     { when: 2, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
                   ].filter((h) => h.enabled && attempts.length >= h.when)
-                : [
-                    { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
-                    { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
-                    { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
-                    { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
-                    { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
-                  ].filter((h) => h.enabled && attempts.length >= h.when);
+                : (() => {
+                    const album = albumByTrack[current.id];
+                    return [
+                      { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                      { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
+                      { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
+                      { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                      { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
+                      { when: 5, label: "Álbum", value: album || "—", enabled: settings.hintAlbum && !!album },
+                    ].filter((h) => h.enabled && attempts.length >= h.when);
+                  })();
               if (!hints.length) return null;
               return (
                 <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 space-y-1">
