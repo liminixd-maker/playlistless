@@ -68,6 +68,8 @@ type Settings = {
   hintAlbum: boolean;
   autoplayNext: boolean;
   reduceMotion: boolean;
+  rangeStartPct: number;
+  rangeEndPct: number;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -84,6 +86,8 @@ const DEFAULT_SETTINGS: Settings = {
   hintAlbum: true,
   autoplayNext: false,
   reduceMotion: false,
+  rangeStartPct: 0,
+  rangeEndPct: 100,
 };
 
 const BG_PRESETS = [
@@ -380,8 +384,19 @@ function Game() {
         try {
           dur = playerRef.current.getDuration?.() || 0;
         } catch {}
-        startOffsetRef.current =
-          dur > 0 ? Math.random() * (dur * 0.5) : Math.random() * 60;
+        const sPct = Math.max(0, Math.min(100, settings.rangeStartPct)) / 100;
+        const ePct = Math.max(0, Math.min(100, settings.rangeEndPct)) / 100;
+        const lo = Math.min(sPct, ePct);
+        const hi = Math.max(sPct, ePct);
+        if (dur > 0) {
+          const windowStart = dur * lo;
+          const windowEnd = dur * hi;
+          const maxStart = Math.max(windowStart, windowEnd - currentLimit);
+          startOffsetRef.current =
+            windowStart + Math.random() * Math.max(0, maxStart - windowStart);
+        } else {
+          startOffsetRef.current = Math.random() * 60;
+        }
       }
       const offset = startOffsetRef.current;
       stopAtRef.current = offset + currentLimit;
@@ -1174,7 +1189,70 @@ function SettingsModal({
               value={settings.hintAlbum}
               onChange={(v) => update("hintAlbum", v)}
             />
+        </div>
+
+        {/* Tramo de la canción */}
+        <div className="space-y-2 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-wider text-slate-400">
+              Tramo aleatorio de la canción
+            </label>
+            <button
+              onClick={() => {
+                update("rangeStartPct", 0);
+                update("rangeEndPct", 100);
+              }}
+              className="text-[10px] uppercase tracking-wider text-slate-400 hover:text-white"
+            >
+              Reset
+            </button>
           </div>
+          <p className="text-xs text-slate-400">
+            El inicio del audio se elegirá al azar entre el{" "}
+            <span className="text-white font-semibold">
+              {Math.min(settings.rangeStartPct, settings.rangeEndPct)}%
+            </span>{" "}
+            y el{" "}
+            <span className="text-white font-semibold">
+              {Math.max(settings.rangeStartPct, settings.rangeEndPct)}%
+            </span>{" "}
+            del tema.
+          </p>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <label className="text-xs text-slate-300 space-y-1">
+              <span>Desde: {settings.rangeStartPct}%</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={settings.rangeStartPct}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  update("rangeStartPct", Math.min(v, settings.rangeEndPct));
+                }}
+                className="w-full accent-emerald-500"
+              />
+            </label>
+            <label className="text-xs text-slate-300 space-y-1">
+              <span>Hasta: {settings.rangeEndPct}%</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={settings.rangeEndPct}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  update("rangeEndPct", Math.max(v, settings.rangeStartPct));
+                }}
+                className="w-full accent-emerald-500"
+              />
+            </label>
+          </div>
+        </div>
+
+
           <Toggle
             label="Auto-reproducir al cambiar de canción"
             value={settings.autoplayNext}
