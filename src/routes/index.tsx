@@ -65,6 +65,7 @@ type Settings = {
   hintChannel: boolean;
   hintWordCount: boolean;
   hintTitleLength: boolean;
+  hintAlbum: boolean;
   autoplayNext: boolean;
   reduceMotion: boolean;
 };
@@ -80,6 +81,7 @@ const DEFAULT_SETTINGS: Settings = {
   hintChannel: true,
   hintWordCount: true,
   hintTitleLength: true,
+  hintAlbum: true,
   autoplayNext: false,
   reduceMotion: false,
 };
