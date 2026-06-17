@@ -65,6 +65,7 @@ type Settings = {
   hintChannel: boolean;
   hintWordCount: boolean;
   hintTitleLength: boolean;
+  hintAlbum: boolean;
   autoplayNext: boolean;
   reduceMotion: boolean;
 };
@@ -80,6 +81,7 @@ const DEFAULT_SETTINGS: Settings = {
   hintChannel: true,
   hintWordCount: true,
   hintTitleLength: true,
+  hintAlbum: true,
   autoplayNext: false,
   reduceMotion: false,
 };
@@ -167,6 +169,7 @@ function Game() {
   const [toast, setToast] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("classic");
   const [currentEffect, setCurrentEffect] = useState<FxEffect | null>(null);
+  const [albumByTrack, setAlbumByTrack] = useState<Record<string, string | null>>({});
 
   const STEPS = mode === "fx" ? STEPS_FX : STEPS_CLASSIC;
   const MAX = STEPS[STEPS.length - 1];
@@ -198,6 +201,33 @@ function Game() {
   useEffect(() => {
     localStorage.setItem(LS_MODE, mode);
   }, [mode]);
+
+  // Best-effort album lookup via iTunes Search API (CORS-friendly, no key)
+  useEffect(() => {
+    if (!current) return;
+    if (current.id in albumByTrack) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cleanTitle = current.title
+          .replace(/\(.*?\)|\[.*?\]/g, " ")
+          .replace(/\b(official|video|audio|music|lyric|lyrics|hd|hq|mv|m\/v|visualizer|live|remaster(ed)?|4k)\b/gi, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const term = encodeURIComponent(`${current.channel || ""} ${cleanTitle}`.trim());
+        const r = await fetch(`https://itunes.apple.com/search?term=${term}&entity=song&limit=1`);
+        if (!r.ok) throw new Error("itunes");
+        const data = await r.json();
+        const album: string | null = data?.results?.[0]?.collectionName || null;
+        if (!cancelled) setAlbumByTrack((m) => ({ ...m, [current.id]: album }));
+      } catch {
+        if (!cancelled) setAlbumByTrack((m) => ({ ...m, [current.id]: null }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [current]);
 
   // Persist settings
   useEffect(() => {
@@ -444,7 +474,7 @@ function Game() {
       if (score >= 0) scored.push({ t, score });
     }
     scored.sort((a, b) => a.score - b.score || a.t.title.length - b.t.title.length);
-    return scored.slice(0, 24).map((s) => s.t);
+    return scored.slice(0, 40).map((s) => s.t);
   }, [query, tracks]);
 
   function shareText() {
@@ -658,13 +688,17 @@ function Game() {
                     { when: 1, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
                     { when: 2, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
                   ].filter((h) => h.enabled && attempts.length >= h.when)
-                : [
-                    { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
-                    { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
-                    { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
-                    { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
-                    { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
-                  ].filter((h) => h.enabled && attempts.length >= h.when);
+                : (() => {
+                    const album = albumByTrack[current.id];
+                    return [
+                      { when: 3, label: "Empieza por", value: (letters[0] || "?").toUpperCase(), enabled: settings.hintFirstLetter },
+                      { when: 4, label: "Segunda letra", value: (letters[1] || "?").toUpperCase(), enabled: settings.hintSecondLetter },
+                      { when: 5, label: "Nº de palabras", value: String(words.length || 1), enabled: settings.hintWordCount },
+                      { when: 5, label: "Artista / canal", value: current.channel || "—", enabled: settings.hintChannel },
+                      { when: 5, label: "Longitud del título", value: `${letters.length} letras`, enabled: settings.hintTitleLength },
+                      { when: 5, label: "Álbum", value: album || "—", enabled: settings.hintAlbum && !!album },
+                    ].filter((h) => h.enabled && attempts.length >= h.when);
+                  })();
               if (!hints.length) return null;
               return (
                 <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 space-y-1">
@@ -1134,6 +1168,11 @@ function SettingsModal({
               label="Longitud del título en letras (5º fallo)"
               value={settings.hintTitleLength}
               onChange={(v) => update("hintTitleLength", v)}
+            />
+            <Toggle
+              label="Álbum del tema (5º fallo)"
+              value={settings.hintAlbum}
+              onChange={(v) => update("hintAlbum", v)}
             />
           </div>
           <Toggle
