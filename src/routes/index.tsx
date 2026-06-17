@@ -202,6 +202,33 @@ function Game() {
     localStorage.setItem(LS_MODE, mode);
   }, [mode]);
 
+  // Best-effort album lookup via iTunes Search API (CORS-friendly, no key)
+  useEffect(() => {
+    if (!current) return;
+    if (current.id in albumByTrack) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cleanTitle = current.title
+          .replace(/\(.*?\)|\[.*?\]/g, " ")
+          .replace(/\b(official|video|audio|music|lyric|lyrics|hd|hq|mv|m\/v|visualizer|live|remaster(ed)?|4k)\b/gi, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const term = encodeURIComponent(`${current.channel || ""} ${cleanTitle}`.trim());
+        const r = await fetch(`https://itunes.apple.com/search?term=${term}&entity=song&limit=1`);
+        if (!r.ok) throw new Error("itunes");
+        const data = await r.json();
+        const album: string | null = data?.results?.[0]?.collectionName || null;
+        if (!cancelled) setAlbumByTrack((m) => ({ ...m, [current.id]: album }));
+      } catch {
+        if (!cancelled) setAlbumByTrack((m) => ({ ...m, [current.id]: null }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [current]);
+
   // Persist settings
   useEffect(() => {
     localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
