@@ -68,6 +68,8 @@ type Settings = {
   hintAlbum: boolean;
   autoplayNext: boolean;
   reduceMotion: boolean;
+  rangeStartPct: number;
+  rangeEndPct: number;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -84,6 +86,8 @@ const DEFAULT_SETTINGS: Settings = {
   hintAlbum: true,
   autoplayNext: false,
   reduceMotion: false,
+  rangeStartPct: 0,
+  rangeEndPct: 100,
 };
 
 const BG_PRESETS = [
