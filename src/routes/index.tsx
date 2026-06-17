@@ -169,6 +169,7 @@ function Game() {
   const [toast, setToast] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("classic");
   const [currentEffect, setCurrentEffect] = useState<FxEffect | null>(null);
+  const [albumByTrack, setAlbumByTrack] = useState<Record<string, string | null>>({});
 
   const STEPS = mode === "fx" ? STEPS_FX : STEPS_CLASSIC;
   const MAX = STEPS[STEPS.length - 1];
