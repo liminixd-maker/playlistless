@@ -1169,6 +1169,11 @@ function SettingsModal({
               value={settings.hintTitleLength}
               onChange={(v) => update("hintTitleLength", v)}
             />
+            <Toggle
+              label="Álbum del tema (5º fallo)"
+              value={settings.hintAlbum}
+              onChange={(v) => update("hintAlbum", v)}
+            />
           </div>
           <Toggle
             label="Auto-reproducir al cambiar de canción"
