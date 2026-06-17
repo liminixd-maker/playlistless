@@ -384,8 +384,19 @@ function Game() {
         try {
           dur = playerRef.current.getDuration?.() || 0;
         } catch {}
-        startOffsetRef.current =
-          dur > 0 ? Math.random() * (dur * 0.5) : Math.random() * 60;
+        const sPct = Math.max(0, Math.min(100, settings.rangeStartPct)) / 100;
+        const ePct = Math.max(0, Math.min(100, settings.rangeEndPct)) / 100;
+        const lo = Math.min(sPct, ePct);
+        const hi = Math.max(sPct, ePct);
+        if (dur > 0) {
+          const windowStart = dur * lo;
+          const windowEnd = dur * hi;
+          const maxStart = Math.max(windowStart, windowEnd - currentLimit);
+          startOffsetRef.current =
+            windowStart + Math.random() * Math.max(0, maxStart - windowStart);
+        } else {
+          startOffsetRef.current = Math.random() * 60;
+        }
       }
       const offset = startOffsetRef.current;
       stopAtRef.current = offset + currentLimit;
