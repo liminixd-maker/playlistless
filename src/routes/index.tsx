@@ -1567,6 +1567,38 @@ function TournamentMode({
     setActiveMatchId(null);
   }
 
+  function reset() {
+    setSize(null);
+    setMatches([]);
+    setChampion(null);
+    setActiveMatchId(null);
+  }
+
+  function pickWinner(matchId: string, winner: Track) {
+    setMatches((prev) => {
+      const next = prev.map((m) => ({ ...m }));
+      const m = next.find((x) => x.id === matchId);
+      if (!m) return prev;
+      m.winner = winner;
+      if (m.round < rounds - 1) {
+        const nextSlot = Math.floor(m.slot / 2);
+        const parent = next.find((x) => x.round === m.round + 1 && x.slot === nextSlot);
+        if (parent) {
+          if (m.slot % 2 === 0) parent.a = winner;
+          else parent.b = winner;
+        }
+      } else {
+        setTimeout(() => setChampion(winner), 300);
+      }
+      return next;
+    });
+    setActiveMatchId(null);
+  }
+
+  function reveal(matchId: string) {
+    setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, revealed: true } : m)));
+  }
+
   // ===== SETUP SCREEN =====
   if (!size) {
     const totalFiltered = filteredTracks.length;
