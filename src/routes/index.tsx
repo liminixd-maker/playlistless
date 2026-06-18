@@ -36,7 +36,7 @@ const LS_ROUND = "ytguessless.round";
 const LS_SETTINGS = "ytguessless.settings";
 const LS_MODE = "ytguessless.mode";
 
-type Mode = "classic" | "fx";
+type Mode = "classic" | "fx" | "tournament";
 
 type FxEffect = {
   id: string;
