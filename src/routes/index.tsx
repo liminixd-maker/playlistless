@@ -1455,10 +1455,107 @@ function TournamentMode({
     return names;
   }, [size, rounds]);
 
+  // ====== FILTERS STATE ======
+  const KEYWORD_TAGS = useMemo(
+    () => [
+      { id: "live", label: "Live / En vivo", patterns: [/\blive\b/i, /\ben\s*vivo\b/i, /\bdirecto\b/i] },
+      { id: "remix", label: "Remix", patterns: [/\bremix\b/i, /\bmix\b/i] },
+      { id: "acoustic", label: "Acoustic / Acústico", patterns: [/\bacoustic\b/i, /\bac[uú]stic[oa]\b/i, /\bunplugged\b/i] },
+      { id: "official", label: "Official Video", patterns: [/\bofficial\s+(music\s+)?video\b/i, /\bvideo\s+oficial\b/i] },
+    ],
+    []
+  );
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [excludedKeywords, setExcludedKeywords] = useState<Set<string>>(new Set());
+  const [dateFilter, setDateFilter] = useState<"any" | "classics" | "recent">("any");
+  const [popularity, setPopularity] = useState<"any" | "hits" | "hidden">("any");
+  const [artistQuery, setArtistQuery] = useState("");
+
+  // Duration bounds
+  const maxDurationInPlaylist = useMemo(() => {
+    let m = 0;
+    for (const t of tracks) if (t.duration && t.duration > m) m = t.duration;
+    return m || 600;
+  }, [tracks]);
+  const [minDur, setMinDur] = useState<number>(0);
+  const [maxDur, setMaxDur] = useState<number>(0);
+  useEffect(() => {
+    // initialize/extend max when playlist enrich completes
+    if (maxDurationInPlaylist > maxDur) setMaxDur(maxDurationInPlaylist);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxDurationInPlaylist]);
+
+  const hasViewCounts = useMemo(
+    () => tracks.some((t) => typeof t.viewCount === "number"),
+    [tracks]
+  );
+  const hasDurations = useMemo(() => tracks.some((t) => !!t.duration), [tracks]);
+  const hasDates = useMemo(() => tracks.some((t) => !!t.publishedAt), [tracks]);
+
+  // ====== FILTERED POOL ======
+  const filteredTracks = useMemo(() => {
+    const now = Date.now();
+    const YEAR = 365.25 * 24 * 3600 * 1000;
+    const norm = (s: string) => normalize(s);
+    const aq = norm(artistQuery.trim());
+    return tracks.filter((t) => {
+      // keyword exclusion
+      for (const k of KEYWORD_TAGS) {
+        if (excludedKeywords.has(k.id)) {
+          if (k.patterns.some((p) => p.test(t.title))) return false;
+        }
+      }
+      // duration
+      if (hasDurations && t.duration) {
+        if (t.duration < minDur || t.duration > maxDur) return false;
+      }
+      // date
+      if (dateFilter !== "any" && t.publishedAt) {
+        const age = now - new Date(t.publishedAt).getTime();
+        if (dateFilter === "classics" && age < 10 * YEAR) return false;
+        if (dateFilter === "recent" && age > 5 * YEAR) return false;
+      }
+      // artist
+      if (aq) {
+        const hay = `${t.channel || ""} ${t.title}`;
+        if (!norm(hay).includes(aq)) return false;
+      }
+      return true;
+    });
+  }, [tracks, excludedKeywords, minDur, maxDur, dateFilter, artistQuery, KEYWORD_TAGS, hasDurations]);
+
+  function toggleKeyword(id: string) {
+    setExcludedKeywords((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function resetFilters() {
+    setExcludedKeywords(new Set());
+    setDateFilter("any");
+    setPopularity("any");
+    setArtistQuery("");
+    setMinDur(0);
+    setMaxDur(maxDurationInPlaylist);
+  }
+
   function start(n: number) {
-    if (tracks.length < n) return;
+    if (filteredTracks.length < n) return;
+    let pool = [...filteredTracks];
+    // Popularity bias: sort, then slice candidate window, then shuffle pick
+    if (popularity !== "any" && hasViewCounts) {
+      pool.sort((a, b) => {
+        const av = a.viewCount ?? 0;
+        const bv = b.viewCount ?? 0;
+        return popularity === "hits" ? bv - av : av - bv;
+      });
+      // narrow to top n*2 for variety, then shuffle
+      pool = pool.slice(0, Math.max(n, Math.min(pool.length, n * 2)));
+    }
     // shuffle
-    const pool = [...tracks];
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -1470,44 +1567,19 @@ function TournamentMode({
     setActiveMatchId(null);
   }
 
-  function reset() {
-    setSize(null);
-    setMatches([]);
-    setChampion(null);
-    setActiveMatchId(null);
-  }
-
-  function pickWinner(matchId: string, winner: Track) {
-    setMatches((prev) => {
-      const next = prev.map((m) => ({ ...m }));
-      const m = next.find((x) => x.id === matchId);
-      if (!m) return prev;
-      m.winner = winner;
-      // propagate to next round
-      if (m.round < rounds - 1) {
-        const nextSlot = Math.floor(m.slot / 2);
-        const parent = next.find((x) => x.round === m.round + 1 && x.slot === nextSlot);
-        if (parent) {
-          if (m.slot % 2 === 0) parent.a = winner;
-          else parent.b = winner;
-        }
-      } else {
-        // final
-        setTimeout(() => setChampion(winner), 300);
-      }
-      return next;
-    });
-    setActiveMatchId(null);
-  }
-
-  function reveal(matchId: string) {
-    setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, revealed: true } : m)));
-  }
-
   // ===== SETUP SCREEN =====
   if (!size) {
+    const totalFiltered = filteredTracks.length;
+    const filtersActive =
+      excludedKeywords.size > 0 ||
+      dateFilter !== "any" ||
+      popularity !== "any" ||
+      artistQuery.trim() !== "" ||
+      minDur > 0 ||
+      (hasDurations && maxDur < maxDurationInPlaylist);
+
     return (
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-10 flex flex-col items-center gap-8">
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-10 flex flex-col items-center gap-6">
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-black tracking-tight">🏆 Torneo de Canciones</h2>
           <p className="text-sm text-slate-400 max-w-md">
@@ -1523,7 +1595,7 @@ function TournamentMode({
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[2, 4, 8, 16].map((n) => {
-                const enough = tracks.length >= n;
+                const enough = totalFiltered >= n;
                 return (
                   <button
                     key={n}
@@ -1540,13 +1612,212 @@ function TournamentMode({
               })}
             </div>
             <p className="text-[11px] text-slate-500 text-center">
-              Playlist actual: {tracks.length} canciones disponibles
+              {filtersActive ? (
+                <>
+                  <span className="text-slate-300 font-semibold">{totalFiltered}</span> de{" "}
+                  {tracks.length} canciones pasan los filtros
+                </>
+              ) : (
+                <>Playlist actual: {tracks.length} canciones disponibles</>
+              )}
             </p>
+
+            {/* ===== Filtros avanzados ===== */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+              <button
+                onClick={() => setFiltersOpen((o) => !o)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-800/40 transition"
+              >
+                <span className="text-sm font-bold flex items-center gap-2">
+                  ⚙️ Filtros Avanzados de la Playlist
+                  {filtersActive && (
+                    <span
+                      className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold"
+                      style={{ backgroundColor: accentColor, color: "#0a0a0a" }}
+                    >
+                      Activos
+                    </span>
+                  )}
+                </span>
+                <span className="text-slate-400 text-sm">{filtersOpen ? "▲" : "▼"}</span>
+              </button>
+              {filtersOpen && (
+                <div className="px-4 pb-5 pt-2 space-y-5 border-t border-slate-800 animate-fade-in">
+                  {/* A) Keywords */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                      Tipo de contenido
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Marca para <span className="text-slate-300">excluir</span> canciones cuyo
+                      título contenga estos términos.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {KEYWORD_TAGS.map((k) => {
+                        const excluded = excludedKeywords.has(k.id);
+                        return (
+                          <button
+                            key={k.id}
+                            onClick={() => toggleKeyword(k.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition ${
+                              excluded
+                                ? "bg-red-500/15 border-red-500/60 text-red-300 line-through"
+                                : "border-slate-700 text-slate-300 hover:border-slate-500"
+                            }`}
+                          >
+                            {excluded ? "✕ " : ""}
+                            {k.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* B) Duration */}
+                  {hasDurations && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                        Duración de la canción
+                      </label>
+                      <p className="text-[11px] text-slate-500">
+                        Solo se incluyen canciones que duren entre{" "}
+                        <span className="text-white font-semibold">{fmt(minDur)}</span> y{" "}
+                        <span className="text-white font-semibold">{fmt(maxDur)}</span>.
+                      </p>
+                      <DurationRange
+                        min={0}
+                        max={maxDurationInPlaylist}
+                        start={minDur}
+                        end={maxDur}
+                        accentColor={accentColor}
+                        onChange={(s, e) => {
+                          setMinDur(s);
+                          setMaxDur(e);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* C) Date */}
+                  {hasDates && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                        Antigüedad del vídeo
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { id: "any", label: "Cualquier fecha" },
+                          { id: "classics", label: "Joyas clásicas" , sub: "+10 años"},
+                          { id: "recent", label: "Últimos años", sub: "<5 años" },
+                        ] as const).map((opt) => {
+                          const active = dateFilter === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => setDateFilter(opt.id as any)}
+                              className={`rounded-xl px-2 py-2 text-xs border-2 transition flex flex-col items-center gap-0.5 ${
+                                active
+                                  ? "border-transparent"
+                                  : "border-slate-700 text-slate-300 hover:border-slate-500"
+                              }`}
+                              style={
+                                active
+                                  ? { backgroundColor: accentColor, color: "#0a0a0a" }
+                                  : undefined
+                              }
+                            >
+                              <span className="font-semibold">{opt.label}</span>
+                              {"sub" in opt && opt.sub && (
+                                <span className="text-[10px] opacity-70">{opt.sub}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* D) Popularity */}
+                  {hasViewCounts && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                        Rarezas / Joyas ocultas
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { id: "any", label: "Aleatorio" },
+                          { id: "hits", label: "🔥 Modo Hits" },
+                          { id: "hidden", label: "💎 Joyas Ocultas" },
+                        ] as const).map((opt) => {
+                          const active = popularity === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => setPopularity(opt.id as any)}
+                              className={`rounded-xl px-2 py-2 text-xs font-semibold border-2 transition ${
+                                active
+                                  ? "border-transparent"
+                                  : "border-slate-700 text-slate-300 hover:border-slate-500"
+                              }`}
+                              style={
+                                active
+                                  ? { backgroundColor: accentColor, color: "#0a0a0a" }
+                                  : undefined
+                              }
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* E) Artist */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                      Filtrar por artista
+                    </label>
+                    <input
+                      value={artistQuery}
+                      onChange={(e) => setArtistQuery(e.target.value)}
+                      placeholder="Ej: Daft Punk"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500"
+                    />
+                    {artistQuery.trim() && (
+                      <p className="text-[11px] text-slate-500">
+                        Se incluirán solo canciones cuyo título o canal contenga "
+                        <span className="text-slate-300">{artistQuery.trim()}</span>".
+                      </p>
+                    )}
+                  </div>
+
+                  {filtersActive && (
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        onClick={resetFilters}
+                        className="text-xs text-slate-400 hover:text-white underline"
+                      >
+                        Restablecer filtros
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {filtersActive && totalFiltered < 16 && (
+              <p className="text-xs text-red-400 text-center font-semibold rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2">
+                ⚠ Quedan {totalFiltered} canciones. Es posible que no haya suficientes para los
+                torneos más grandes con estos filtros.
+              </p>
+            )}
           </div>
         )}
       </main>
     );
   }
+
 
   const activeMatch = matches.find((m) => m.id === activeMatchId) || null;
 
