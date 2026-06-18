@@ -554,6 +554,7 @@ function Game() {
           >
             <option value="classic">Clásico · 6 intentos</option>
             <option value="fx">FX · 3 intentos · 60s con efecto</option>
+            <option value="tournament">Torneo · Brackets</option>
           </select>
           {mode === "fx" && currentEffect && !finished && (
             <span
