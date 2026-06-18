@@ -2186,3 +2186,115 @@ function ChampionOverlay({
     </div>
   );
 }
+
+function DurationRange({
+  min,
+  max,
+  start,
+  end,
+  accentColor,
+  onChange,
+}: {
+  min: number;
+  max: number;
+  start: number;
+  end: number;
+  accentColor: string;
+  onChange: (start: number, end: number) => void;
+}) {
+  const span = Math.max(1, max - min);
+  const leftPct = ((start - min) / span) * 100;
+  const rightPct = ((end - min) / span) * 100;
+
+  function parseMS(mins: string, secs: string): number {
+    const m = Math.max(0, Math.floor(Number(mins) || 0));
+    const s = Math.max(0, Math.min(59, Math.floor(Number(secs) || 0)));
+    return m * 60 + s;
+  }
+  const sMin = Math.floor(start / 60);
+  const sSec = start % 60;
+  const eMin = Math.floor(end / 60);
+  const eSec = end % 60;
+
+  return (
+    <div className="space-y-3">
+      {/* dual slider */}
+      <div className="relative h-8 flex items-center">
+        <div className="absolute left-0 right-0 h-1.5 rounded-full bg-slate-800" />
+        <div
+          className="absolute h-1.5 rounded-full"
+          style={{
+            left: `${leftPct}%`,
+            right: `${100 - rightPct}%`,
+            backgroundColor: accentColor,
+          }}
+        />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={1}
+          value={start}
+          onChange={(e) => {
+            const v = Math.min(Number(e.target.value), end);
+            onChange(v, end);
+          }}
+          className="absolute w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+        />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={1}
+          value={end}
+          onChange={(e) => {
+            const v = Math.max(Number(e.target.value), start);
+            onChange(start, v);
+          }}
+          className="absolute w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+        />
+      </div>
+      {/* numeric inputs */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 mr-1">Desde</span>
+          <input
+            type="number"
+            min={0}
+            value={sMin}
+            onChange={(e) => onChange(Math.min(parseMS(e.target.value, String(sSec)), end), end)}
+            className="w-10 bg-transparent text-sm text-right focus:outline-none tabular-nums"
+          />
+          <span className="text-slate-500">:</span>
+          <input
+            type="number"
+            min={0}
+            max={59}
+            value={sSec.toString().padStart(2, "0")}
+            onChange={(e) => onChange(Math.min(parseMS(String(sMin), e.target.value), end), end)}
+            className="w-10 bg-transparent text-sm focus:outline-none tabular-nums"
+          />
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 mr-1">Hasta</span>
+          <input
+            type="number"
+            min={0}
+            value={eMin}
+            onChange={(e) => onChange(start, Math.max(parseMS(e.target.value, String(eSec)), start))}
+            className="w-10 bg-transparent text-sm text-right focus:outline-none tabular-nums"
+          />
+          <span className="text-slate-500">:</span>
+          <input
+            type="number"
+            min={0}
+            max={59}
+            value={eSec.toString().padStart(2, "0")}
+            onChange={(e) => onChange(start, Math.max(parseMS(String(eMin), e.target.value), start))}
+            className="w-10 bg-transparent text-sm focus:outline-none tabular-nums"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
