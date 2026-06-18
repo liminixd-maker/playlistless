@@ -306,6 +306,7 @@ function Game() {
 
   // Re-pick when switching mode (so effect/limits apply cleanly)
   useEffect(() => {
+    if (mode === "tournament") return;
     if (tracks.length) pickRandom(tracks);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
