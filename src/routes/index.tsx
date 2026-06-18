@@ -199,7 +199,7 @@ function Game() {
       } catch {}
     }
     const rawM = localStorage.getItem(LS_MODE);
-    if (rawM === "classic" || rawM === "fx") setMode(rawM);
+    if (rawM === "classic" || rawM === "fx" || rawM === "tournament") setMode(rawM);
   }, []);
 
   useEffect(() => {
