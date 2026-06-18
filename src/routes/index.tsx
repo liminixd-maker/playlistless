@@ -154,6 +154,13 @@ function fmt(t: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function parseISODuration(s?: string): number {
+  if (!s) return 0;
+  const m = s.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
+}
+
 function Game() {
   const [config, setConfig] = useState<{ apiKey: string; playlistId: string } | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
