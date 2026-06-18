@@ -291,6 +291,37 @@ function Game() {
         if (!all.length) throw new Error("Playlist vacía");
         setTracks(all);
         pickRandom(all);
+
+        // Enrich with duration/publishedAt/viewCount in background
+        (async () => {
+          const enriched = [...all];
+          for (let i = 0; i < enriched.length; i += 50) {
+            if (cancelled) return;
+            const chunk = enriched.slice(i, i + 50);
+            try {
+              const u = new URL("https://www.googleapis.com/youtube/v3/videos");
+              u.searchParams.set("part", "contentDetails,statistics,snippet");
+              u.searchParams.set("id", chunk.map((t) => t.id).join(","));
+              u.searchParams.set("key", config.apiKey);
+              const rv = await fetch(u.toString());
+              if (!rv.ok) continue;
+              const dv = await rv.json();
+              const map = new Map<string, any>();
+              for (const it of dv.items || []) map.set(it.id, it);
+              for (let j = 0; j < chunk.length; j++) {
+                const v = map.get(chunk[j].id);
+                if (!v) continue;
+                enriched[i + j] = {
+                  ...chunk[j],
+                  duration: parseISODuration(v.contentDetails?.duration),
+                  publishedAt: v.snippet?.publishedAt,
+                  viewCount: v.statistics?.viewCount ? Number(v.statistics.viewCount) : undefined,
+                };
+              }
+            } catch {}
+          }
+          if (!cancelled) setTracks([...enriched]);
+        })();
       } catch (e: any) {
         if (!cancelled) setLoadError(e.message || "Error cargando playlist");
       } finally {
