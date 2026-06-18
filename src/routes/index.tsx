@@ -570,6 +570,15 @@ function Game() {
 
 
 
+      {mode === "tournament" ? (
+        <TournamentMode
+          tracks={tracks}
+          loading={loadingTracks}
+          accentColor={settings.accentColor}
+          reduceMotion={settings.reduceMotion}
+          volume={settings.muted ? 0 : settings.volume}
+        />
+      ) : (
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6">
         {loadingTracks && <p className="text-center text-slate-400">Cargando playlist…</p>}
         {loadError && (
