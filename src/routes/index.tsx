@@ -846,6 +846,7 @@ function Game() {
           </div>
         )}
       </main>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-slate-900 px-4 py-2 rounded-lg text-sm font-medium shadow-lg">
