@@ -1330,3 +1330,511 @@ function Toggle({
     </button>
   );
 }
+
+// ============== TOURNAMENT MODE ==============
+
+type TMatch = {
+  id: string;
+  round: number;
+  slot: number; // index within round
+  a: Track | null;
+  b: Track | null;
+  winner: Track | null;
+  revealed: boolean;
+};
+
+function buildBracket(picked: Track[]): TMatch[] {
+  const size = picked.length;
+  const rounds = Math.log2(size);
+  const matches: TMatch[] = [];
+  // Round 0 (first round) with picked tracks
+  for (let i = 0; i < size / 2; i++) {
+    matches.push({
+      id: `r0-${i}`,
+      round: 0,
+      slot: i,
+      a: picked[i * 2],
+      b: picked[i * 2 + 1],
+      winner: null,
+      revealed: false,
+    });
+  }
+  // Empty subsequent rounds
+  for (let r = 1; r < rounds; r++) {
+    const count = size / Math.pow(2, r + 1);
+    for (let i = 0; i < count; i++) {
+      matches.push({
+        id: `r${r}-${i}`,
+        round: r,
+        slot: i,
+        a: null,
+        b: null,
+        winner: null,
+        revealed: r === 0 ? false : true, // reveal all later rounds
+      });
+    }
+  }
+  return matches;
+}
+
+function TournamentMode({
+  tracks,
+  loading,
+  accentColor,
+  reduceMotion,
+  volume,
+}: {
+  tracks: Track[];
+  loading: boolean;
+  accentColor: string;
+  reduceMotion: boolean;
+  volume: number;
+}) {
+  const [size, setSize] = useState<number | null>(null);
+  const [matches, setMatches] = useState<TMatch[]>([]);
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
+  const [champion, setChampion] = useState<Track | null>(null);
+
+  const rounds = size ? Math.log2(size) : 0;
+  const roundNames = useMemo(() => {
+    if (!size) return [] as string[];
+    const names: string[] = [];
+    for (let r = 0; r < rounds; r++) {
+      const left = size / Math.pow(2, r + 1);
+      if (left === 1) names.push("Final");
+      else if (left === 2) names.push("Semifinal");
+      else if (left === 4) names.push("Cuartos");
+      else if (left === 8) names.push("Octavos");
+      else names.push(`Ronda ${r + 1}`);
+    }
+    return names;
+  }, [size, rounds]);
+
+  function start(n: number) {
+    if (tracks.length < n) return;
+    // shuffle
+    const pool = [...tracks];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const picked = pool.slice(0, n);
+    setSize(n);
+    setMatches(buildBracket(picked));
+    setChampion(null);
+    setActiveMatchId(null);
+  }
+
+  function reset() {
+    setSize(null);
+    setMatches([]);
+    setChampion(null);
+    setActiveMatchId(null);
+  }
+
+  function pickWinner(matchId: string, winner: Track) {
+    setMatches((prev) => {
+      const next = prev.map((m) => ({ ...m }));
+      const m = next.find((x) => x.id === matchId);
+      if (!m) return prev;
+      m.winner = winner;
+      // propagate to next round
+      if (m.round < rounds - 1) {
+        const nextSlot = Math.floor(m.slot / 2);
+        const parent = next.find((x) => x.round === m.round + 1 && x.slot === nextSlot);
+        if (parent) {
+          if (m.slot % 2 === 0) parent.a = winner;
+          else parent.b = winner;
+        }
+      } else {
+        // final
+        setTimeout(() => setChampion(winner), 300);
+      }
+      return next;
+    });
+    setActiveMatchId(null);
+  }
+
+  function reveal(matchId: string) {
+    setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, revealed: true } : m)));
+  }
+
+  // ===== SETUP SCREEN =====
+  if (!size) {
+    return (
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-10 flex flex-col items-center gap-8">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-black tracking-tight">🏆 Torneo de Canciones</h2>
+          <p className="text-sm text-slate-400 max-w-md">
+            Empareja canciones aleatorias en un bracket de eliminatorias. Escucha ambas,
+            elige tu favorita, y avanza hasta coronar una ganadora.
+          </p>
+        </div>
+        {loading && <p className="text-slate-400">Cargando playlist…</p>}
+        {!loading && (
+          <div className="w-full space-y-4">
+            <p className="text-xs uppercase tracking-wider text-slate-400 text-center">
+              Elige el tamaño del torneo
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[2, 4, 8, 16].map((n) => {
+                const enough = tracks.length >= n;
+                return (
+                  <button
+                    key={n}
+                    onClick={() => start(n)}
+                    disabled={!enough}
+                    className="aspect-square rounded-2xl border-2 border-slate-700 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-500 transition flex flex-col items-center justify-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-4xl font-black">{n}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400">
+                      canciones
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-slate-500 text-center">
+              Playlist actual: {tracks.length} canciones disponibles
+            </p>
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  const activeMatch = matches.find((m) => m.id === activeMatchId) || null;
+
+  return (
+    <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 flex flex-col gap-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-xl font-bold">🏆 Torneo · {size} canciones</h2>
+        <button
+          onClick={reset}
+          className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold"
+        >
+          Nuevo torneo
+        </button>
+      </div>
+
+      {/* Bracket Map */}
+      <div className="overflow-x-auto pb-4">
+        <div
+          className="flex gap-6 sm:gap-10 min-w-max items-stretch"
+          style={{ minHeight: `${size * 36}px` }}
+        >
+          {Array.from({ length: rounds }).map((_, r) => {
+            const roundMatches = matches.filter((m) => m.round === r);
+            return (
+              <div key={r} className="flex flex-col flex-1 min-w-[180px]">
+                <div className="text-[10px] uppercase tracking-wider text-slate-400 text-center mb-3 font-semibold">
+                  {roundNames[r]}
+                </div>
+                <div className="flex-1 flex flex-col justify-around gap-2">
+                  {roundMatches.map((m) => {
+                    const ready = m.a && m.b && !m.winner;
+                    const done = !!m.winner;
+                    return (
+                      <BracketCell
+                        key={m.id}
+                        match={m}
+                        ready={!!ready}
+                        done={done}
+                        accentColor={accentColor}
+                        onOpen={() => ready && setActiveMatchId(m.id)}
+                        onReveal={() => reveal(m.id)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {/* Champion column */}
+          <div className="flex flex-col flex-1 min-w-[200px]">
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 text-center mb-3 font-semibold">
+              Ganador
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div
+                className="w-full rounded-xl border-2 px-3 py-4 text-center"
+                style={{
+                  borderColor: champion ? accentColor : "rgb(51 65 85)",
+                  boxShadow: champion ? `0 0 30px ${accentColor}40` : undefined,
+                }}
+              >
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">
+                  👑
+                </div>
+                <div className="text-sm font-bold truncate">
+                  {champion ? champion.title : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Duel modal */}
+      {activeMatch && (
+        <DuelView
+          match={activeMatch}
+          accentColor={accentColor}
+          volume={volume}
+          onPick={(w) => pickWinner(activeMatch.id, w)}
+          onClose={() => setActiveMatchId(null)}
+        />
+      )}
+
+      {/* Champion celebration */}
+      {champion && (
+        <ChampionOverlay
+          champion={champion}
+          accentColor={accentColor}
+          reduceMotion={reduceMotion}
+          onReset={reset}
+        />
+      )}
+    </main>
+  );
+}
+
+function BracketCell({
+  match,
+  ready,
+  done,
+  accentColor,
+  onOpen,
+  onReveal,
+}: {
+  match: TMatch;
+  ready: boolean;
+  done: boolean;
+  accentColor: string;
+  onOpen: () => void;
+  onReveal: () => void;
+}) {
+  const isFirstRound = match.round === 0;
+  const showNames = match.revealed || !isFirstRound || done;
+
+  function Row({ track, isWinner }: { track: Track | null; isWinner: boolean }) {
+    const label = track ? (showNames ? track.title : "??? ???") : "—";
+    return (
+      <div
+        className={`px-2 py-1.5 text-xs truncate ${
+          isWinner ? "font-bold" : "text-slate-300"
+        }`}
+        style={isWinner ? { color: accentColor } : undefined}
+      >
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-lg border bg-slate-900/60 overflow-hidden transition ${
+        ready
+          ? "border-slate-600 hover:border-white cursor-pointer hover:bg-slate-800/80"
+          : done
+            ? "border-slate-800 opacity-70"
+            : "border-slate-800"
+      }`}
+      onClick={() => ready && onOpen()}
+      style={
+        ready
+          ? { boxShadow: `0 0 0 1px ${accentColor}30, 0 0 12px ${accentColor}20` }
+          : undefined
+      }
+    >
+      <Row track={match.a} isWinner={!!match.winner && match.winner.id === match.a?.id} />
+      <div className="border-t border-slate-800" />
+      <Row track={match.b} isWinner={!!match.winner && match.winner.id === match.b?.id} />
+      {isFirstRound && !match.revealed && !done && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onReveal();
+          }}
+          className="w-full text-[10px] uppercase tracking-wider py-1 bg-slate-800 hover:bg-slate-700 border-t border-slate-700 font-semibold"
+        >
+          Revelar
+        </button>
+      )}
+      {ready && (match.revealed || !isFirstRound) && (
+        <div
+          className="text-center text-[10px] uppercase tracking-wider py-1 border-t border-slate-700 font-bold"
+          style={{ color: accentColor }}
+        >
+          ▶ Enfrentar
+        </div>
+      )}
+      {done && (
+        <div className="text-center text-[10px] uppercase tracking-wider py-1 border-t border-slate-800 text-slate-500">
+          Resuelto
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DuelView({
+  match,
+  accentColor,
+  volume,
+  onPick,
+  onClose,
+}: {
+  match: TMatch;
+  accentColor: string;
+  volume: number;
+  onPick: (w: Track) => void;
+  onClose: () => void;
+}) {
+  if (!match.a || !match.b) return null;
+  const mute = volume === 0 ? 1 : 0;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm animate-fade-in flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <button
+          onClick={onClose}
+          className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold"
+        >
+          ← Volver al mapa
+        </button>
+        <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
+          Duelo
+        </div>
+        <div className="w-[120px]" />
+      </div>
+      <div className="flex-1 flex flex-col md:flex-row items-stretch gap-4 p-4 md:p-8 overflow-auto">
+        {[match.a, match.b].map((t, idx) => (
+          <button
+            key={t.id}
+            onClick={() => onPick(t)}
+            className="flex-1 group flex flex-col rounded-2xl border-2 border-slate-700 bg-slate-900/60 hover:bg-slate-800/80 transition overflow-hidden text-left"
+            style={{ minHeight: 240 }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLElement).style.borderColor = accentColor)
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLElement).style.borderColor = "rgb(51 65 85)")
+            }
+          >
+            <div className="relative w-full aspect-video bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${t.id}?rel=0&modestbranding=1&mute=${mute}`}
+                title={t.title}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            </div>
+            <div className="p-4 flex flex-col gap-2 flex-1">
+              <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                Opción {idx === 0 ? "A" : "B"}
+              </span>
+              <span className="text-lg font-bold leading-tight">{t.title}</span>
+              {t.channel && (
+                <span className="text-xs text-slate-400 truncate">{t.channel}</span>
+              )}
+              <div
+                className="mt-auto self-start text-xs px-3 py-1.5 rounded-lg font-bold transition group-hover:scale-105"
+                style={{
+                  backgroundColor: accentColor,
+                  color: "#0a0a0a",
+                }}
+              >
+                Elegir ganadora →
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+      <div className="text-center text-xs text-slate-500 pb-4">
+        Escucha ambas y haz clic sobre la tarjeta de tu favorita.
+      </div>
+    </div>
+  );
+}
+
+function ChampionOverlay({
+  champion,
+  accentColor,
+  reduceMotion,
+  onReset,
+}: {
+  champion: Track;
+  accentColor: string;
+  reduceMotion: boolean;
+  onReset: () => void;
+}) {
+  const confetti = useMemo(() => {
+    if (reduceMotion) return [];
+    const colors = [accentColor, "#fde047", "#f472b6", "#60a5fa", "#34d399", "#f87171"];
+    return Array.from({ length: 80 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 1.5,
+      duration: 2 + Math.random() * 2.5,
+      color: colors[i % colors.length],
+      size: 6 + Math.random() * 8,
+      rot: Math.random() * 360,
+    }));
+  }, [accentColor, reduceMotion]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center px-4 overflow-hidden">
+      <style>{`
+        @keyframes tourney-confetti-fall {
+          0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(720deg); opacity: 0.8; }
+        }
+      `}</style>
+      {confetti.map((c) => (
+        <span
+          key={c.id}
+          className="absolute top-0 pointer-events-none rounded-sm"
+          style={{
+            left: `${c.left}%`,
+            width: `${c.size}px`,
+            height: `${c.size * 0.4}px`,
+            background: c.color,
+            transform: `rotate(${c.rot}deg)`,
+            animation: `tourney-confetti-fall ${c.duration}s ${c.delay}s linear infinite`,
+          }}
+        />
+      ))}
+      <div className="relative text-center space-y-6 max-w-2xl animate-scale-in">
+        <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400">
+          🏆 Ganadora del torneo
+        </div>
+        <h2
+          className="text-4xl sm:text-6xl font-black leading-tight"
+          style={{ color: accentColor, textShadow: `0 0 40px ${accentColor}80` }}
+        >
+          {champion.title}
+        </h2>
+        {champion.channel && (
+          <p className="text-sm text-slate-400">{champion.channel}</p>
+        )}
+        <div className="relative w-full max-w-md mx-auto aspect-video rounded-xl overflow-hidden shadow-2xl bg-black">
+          <iframe
+            src={`https://www.youtube.com/embed/${champion.id}?autoplay=1&rel=0&modestbranding=1`}
+            title={champion.title}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full border-0"
+          />
+        </div>
+        <button
+          onClick={onReset}
+          className="px-6 py-3 rounded-xl font-bold text-sm transition hover:scale-105"
+          style={{ backgroundColor: accentColor, color: "#0a0a0a" }}
+        >
+          🎮 Nuevo torneo
+        </button>
+      </div>
+    </div>
+  );
+}
