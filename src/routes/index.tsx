@@ -1712,7 +1712,7 @@ function TournamentMode({
       }
       return true;
     });
-  }, [tracks, excludedKeywords, minDur, maxDur, dateFilter, artistQuery, KEYWORD_TAGS, hasDurations]);
+  }, [tracks, played, excludedKeywords, minDur, maxDur, dateFilter, artistQuery, KEYWORD_TAGS, hasDurations]);
 
   function toggleKeyword(id: string) {
     setExcludedKeywords((prev) => {
