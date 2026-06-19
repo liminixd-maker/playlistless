@@ -247,6 +247,9 @@ function Game() {
   const [mode, setMode] = useState<Mode>("classic");
   const [currentEffect, setCurrentEffect] = useState<FxEffect | null>(null);
   const [albumByTrack, setAlbumByTrack] = useState<Record<string, string | null>>({});
+  const [showHistory, setShowHistory] = useState(false);
+  const [noAvailableMsg, setNoAvailableMsg] = useState<string | null>(null);
+  const { played, markPlayed, unlock, clearAll } = usePlayedHistory();
 
   const STEPS = mode === "fx" ? STEPS_FX : STEPS_CLASSIC;
   const MAX = STEPS[STEPS.length - 1];
