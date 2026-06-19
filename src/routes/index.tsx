@@ -685,9 +685,39 @@ function Game() {
             </span>
           )}
         </div>
+        <div className="max-w-2xl mx-auto mt-3">
+          <HistoryPanel
+            open={showHistory}
+            onToggle={() => setShowHistory((o) => !o)}
+            played={played}
+            onUnlock={unlock}
+            onClearAll={() => {
+              clearAll();
+              setToast("Historial vaciado · todas las canciones desbloqueadas");
+              setTimeout(() => setToast(null), 1800);
+            }}
+            accentColor={settings.accentColor}
+          />
+        </div>
       </header>
 
-
+      {noAvailableMsg && mode !== "tournament" && (
+        <div className="max-w-2xl mx-auto w-full px-4 pt-4">
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm px-4 py-3 flex items-center justify-between gap-3">
+            <span>⚠️ {noAvailableMsg}</span>
+            <button
+              onClick={() => {
+                clearAll();
+                setNoAvailableMsg(null);
+                if (tracks.length) pickRandom(tracks);
+              }}
+              className="text-xs px-2 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40"
+            >
+              Desbloquear todas
+            </button>
+          </div>
+        </div>
+      )}
 
       {mode === "tournament" ? (
         <TournamentMode
@@ -696,6 +726,8 @@ function Game() {
           accentColor={settings.accentColor}
           reduceMotion={settings.reduceMotion}
           volume={settings.muted ? 0 : settings.volume}
+          played={played}
+          markPlayed={markPlayed}
         />
       ) : (
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6">
