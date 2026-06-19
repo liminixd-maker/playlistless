@@ -220,6 +220,84 @@ function parseISODuration(s?: string): number {
   return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
 }
 
+function HistoryPanel({
+  open,
+  onToggle,
+  played,
+  onUnlock,
+  onClearAll,
+  accentColor,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  played: Record<string, PlayedEntry>;
+  onUnlock: (id: string) => void;
+  onClearAll: () => void;
+  accentColor: string;
+}) {
+  const entries = Object.values(played).sort((a, b) => a.title.localeCompare(b.title));
+  const count = entries.length;
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-800/40 transition"
+      >
+        <span className="text-xs font-semibold tracking-wide text-slate-200">
+          📋 Gestionar canciones jugadas
+        </span>
+        <span className="flex items-center gap-2">
+          <span
+            className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border"
+            style={{ borderColor: accentColor, color: accentColor }}
+          >
+            {count} excluida{count === 1 ? "" : "s"}
+          </span>
+          <span className="text-slate-400 text-xs">{open ? "▲" : "▼"}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 py-3 border-t border-slate-800 space-y-3">
+          <button
+            onClick={onClearAll}
+            disabled={count === 0}
+            className="w-full px-3 py-2 rounded-lg text-xs font-semibold border border-slate-700 bg-slate-800/60 hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+          >
+            🔄 Desbloquear todas las canciones
+          </button>
+          {count === 0 ? (
+            <p className="text-[11px] text-slate-500 text-center py-2">
+              Aún no hay canciones jugadas. Cuando empieces a jugar, aparecerán aquí.
+            </p>
+          ) : (
+            <ul className="max-h-56 overflow-y-auto rounded-lg border border-slate-800 divide-y divide-slate-800/60 bg-slate-950/40">
+              {entries.map((e) => (
+                <li key={e.id} className="flex items-center gap-2 px-2.5 py-1.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-200 truncate">{e.title}</p>
+                    {e.channel && (
+                      <p className="text-[10px] text-slate-500 truncate">{e.channel}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onUnlock(e.id)}
+                    title="Devolver al bombo"
+                    className="shrink-0 w-7 h-7 rounded-md border border-slate-700 bg-slate-800/60 hover:bg-green-600/30 hover:border-green-500/60 text-slate-200 text-sm font-bold flex items-center justify-center transition"
+                  >
+                    🔓
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
 function Game() {
   const [config, setConfig] = useState<{ apiKey: string; playlistId: string } | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
