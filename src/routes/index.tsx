@@ -397,7 +397,19 @@ function Game() {
   }, [config]);
 
   function pickRandom(list: Track[]) {
-    const t = list[Math.floor(Math.random() * list.length)];
+    const available = list.filter((x) => !played[x.id]);
+    if (!available.length) {
+      setNoAvailableMsg(
+        list.length === 0
+          ? "No hay canciones cargadas."
+          : "No quedan canciones sin jugar. Desbloquea algunas desde 📋 Gestionar canciones jugadas."
+      );
+      setCurrent(null);
+      return;
+    }
+    setNoAvailableMsg(null);
+    const t = available[Math.floor(Math.random() * available.length)];
+    markPlayed({ id: t.id, title: t.title, channel: t.channel });
     setCurrent(t);
     setAttempts([]);
     setFinished(null);
