@@ -35,6 +35,65 @@ const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
 const LS_SETTINGS = "ytguessless.settings";
 const LS_MODE = "ytguessless.mode";
+const LS_PLAYED = "playlistless_played_songs";
+
+type PlayedEntry = { id: string; title: string; channel?: string };
+
+function usePlayedHistory() {
+  const [played, setPlayed] = useState<Record<string, PlayedEntry>>({});
+  // Load once
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_PLAYED);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        // Back-compat: array of ids
+        const map: Record<string, PlayedEntry> = {};
+        for (const v of parsed) {
+          if (typeof v === "string") map[v] = { id: v, title: v };
+          else if (v && typeof v.id === "string") map[v.id] = { id: v.id, title: v.title || v.id, channel: v.channel };
+        }
+        setPlayed(map);
+      } else if (parsed && typeof parsed === "object") {
+        setPlayed(parsed);
+      }
+    } catch {}
+  }, []);
+  // Persist
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_PLAYED, JSON.stringify(played));
+    } catch {}
+  }, [played]);
+
+  const markPlayed = (entries: PlayedEntry | PlayedEntry[]) => {
+    const list = Array.isArray(entries) ? entries : [entries];
+    if (!list.length) return;
+    setPlayed((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const e of list) {
+        if (!e?.id) continue;
+        if (!next[e.id]) {
+          next[e.id] = { id: e.id, title: e.title || e.id, channel: e.channel };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  };
+  const unlock = (id: string) => {
+    setPlayed((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+  const clearAll = () => setPlayed({});
+  return { played, markPlayed, unlock, clearAll };
+}
 
 type Mode = "classic" | "fx" | "tournament";
 
@@ -161,6 +220,84 @@ function parseISODuration(s?: string): number {
   return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
 }
 
+function HistoryPanel({
+  open,
+  onToggle,
+  played,
+  onUnlock,
+  onClearAll,
+  accentColor,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  played: Record<string, PlayedEntry>;
+  onUnlock: (id: string) => void;
+  onClearAll: () => void;
+  accentColor: string;
+}) {
+  const entries = Object.values(played).sort((a, b) => a.title.localeCompare(b.title));
+  const count = entries.length;
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-800/40 transition"
+      >
+        <span className="text-xs font-semibold tracking-wide text-slate-200">
+          📋 Gestionar canciones jugadas
+        </span>
+        <span className="flex items-center gap-2">
+          <span
+            className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border"
+            style={{ borderColor: accentColor, color: accentColor }}
+          >
+            {count} excluida{count === 1 ? "" : "s"}
+          </span>
+          <span className="text-slate-400 text-xs">{open ? "▲" : "▼"}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 py-3 border-t border-slate-800 space-y-3">
+          <button
+            onClick={onClearAll}
+            disabled={count === 0}
+            className="w-full px-3 py-2 rounded-lg text-xs font-semibold border border-slate-700 bg-slate-800/60 hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+          >
+            🔄 Desbloquear todas las canciones
+          </button>
+          {count === 0 ? (
+            <p className="text-[11px] text-slate-500 text-center py-2">
+              Aún no hay canciones jugadas. Cuando empieces a jugar, aparecerán aquí.
+            </p>
+          ) : (
+            <ul className="max-h-56 overflow-y-auto rounded-lg border border-slate-800 divide-y divide-slate-800/60 bg-slate-950/40">
+              {entries.map((e) => (
+                <li key={e.id} className="flex items-center gap-2 px-2.5 py-1.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-200 truncate">{e.title}</p>
+                    {e.channel && (
+                      <p className="text-[10px] text-slate-500 truncate">{e.channel}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onUnlock(e.id)}
+                    title="Devolver al bombo"
+                    className="shrink-0 w-7 h-7 rounded-md border border-slate-700 bg-slate-800/60 hover:bg-green-600/30 hover:border-green-500/60 text-slate-200 text-sm font-bold flex items-center justify-center transition"
+                  >
+                    🔓
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
 function Game() {
   const [config, setConfig] = useState<{ apiKey: string; playlistId: string } | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -188,6 +325,9 @@ function Game() {
   const [mode, setMode] = useState<Mode>("classic");
   const [currentEffect, setCurrentEffect] = useState<FxEffect | null>(null);
   const [albumByTrack, setAlbumByTrack] = useState<Record<string, string | null>>({});
+  const [showHistory, setShowHistory] = useState(false);
+  const [noAvailableMsg, setNoAvailableMsg] = useState<string | null>(null);
+  const { played, markPlayed, unlock, clearAll } = usePlayedHistory();
 
   const STEPS = mode === "fx" ? STEPS_FX : STEPS_CLASSIC;
   const MAX = STEPS[STEPS.length - 1];
@@ -335,7 +475,19 @@ function Game() {
   }, [config]);
 
   function pickRandom(list: Track[]) {
-    const t = list[Math.floor(Math.random() * list.length)];
+    const available = list.filter((x) => !played[x.id]);
+    if (!available.length) {
+      setNoAvailableMsg(
+        list.length === 0
+          ? "No hay canciones cargadas."
+          : "No quedan canciones sin jugar. Desbloquea algunas desde 📋 Gestionar canciones jugadas."
+      );
+      setCurrent(null);
+      return;
+    }
+    setNoAvailableMsg(null);
+    const t = available[Math.floor(Math.random() * available.length)];
+    markPlayed({ id: t.id, title: t.title, channel: t.channel });
     setCurrent(t);
     setAttempts([]);
     setFinished(null);
@@ -611,9 +763,39 @@ function Game() {
             </span>
           )}
         </div>
+        <div className="max-w-2xl mx-auto mt-3">
+          <HistoryPanel
+            open={showHistory}
+            onToggle={() => setShowHistory((o) => !o)}
+            played={played}
+            onUnlock={unlock}
+            onClearAll={() => {
+              clearAll();
+              setToast("Historial vaciado · todas las canciones desbloqueadas");
+              setTimeout(() => setToast(null), 1800);
+            }}
+            accentColor={settings.accentColor}
+          />
+        </div>
       </header>
 
-
+      {noAvailableMsg && mode !== "tournament" && (
+        <div className="max-w-2xl mx-auto w-full px-4 pt-4">
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm px-4 py-3 flex items-center justify-between gap-3">
+            <span>⚠️ {noAvailableMsg}</span>
+            <button
+              onClick={() => {
+                clearAll();
+                setNoAvailableMsg(null);
+                if (tracks.length) pickRandom(tracks);
+              }}
+              className="text-xs px-2 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40"
+            >
+              Desbloquear todas
+            </button>
+          </div>
+        </div>
+      )}
 
       {mode === "tournament" ? (
         <TournamentMode
@@ -622,6 +804,8 @@ function Game() {
           accentColor={settings.accentColor}
           reduceMotion={settings.reduceMotion}
           volume={settings.muted ? 0 : settings.volume}
+          played={played}
+          markPlayed={markPlayed}
         />
       ) : (
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6">
@@ -1428,12 +1612,16 @@ function TournamentMode({
   accentColor,
   reduceMotion,
   volume,
+  played,
+  markPlayed,
 }: {
   tracks: Track[];
   loading: boolean;
   accentColor: string;
   reduceMotion: boolean;
   volume: number;
+  played: Record<string, PlayedEntry>;
+  markPlayed: (entries: PlayedEntry | PlayedEntry[]) => void;
 }) {
   const [size, setSize] = useState<number | null>(null);
   const [matches, setMatches] = useState<TMatch[]>([]);
@@ -1499,6 +1687,8 @@ function TournamentMode({
     const norm = (s: string) => normalize(s);
     const aq = norm(artistQuery.trim());
     return tracks.filter((t) => {
+      // history exclusion
+      if (played[t.id]) return false;
       // keyword exclusion
       for (const k of KEYWORD_TAGS) {
         if (excludedKeywords.has(k.id)) {
@@ -1522,7 +1712,7 @@ function TournamentMode({
       }
       return true;
     });
-  }, [tracks, excludedKeywords, minDur, maxDur, dateFilter, artistQuery, KEYWORD_TAGS, hasDurations]);
+  }, [tracks, played, excludedKeywords, minDur, maxDur, dateFilter, artistQuery, KEYWORD_TAGS, hasDurations]);
 
   function toggleKeyword(id: string) {
     setExcludedKeywords((prev) => {
@@ -1561,6 +1751,7 @@ function TournamentMode({
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     const picked = pool.slice(0, n);
+    markPlayed(picked.map((t) => ({ id: t.id, title: t.title, channel: t.channel })));
     setSize(n);
     setMatches(buildBracket(picked));
     setChampion(null);
