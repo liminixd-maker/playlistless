@@ -1751,6 +1751,7 @@ function TournamentMode({
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     const picked = pool.slice(0, n);
+    markPlayed(picked.map((t) => ({ id: t.id, title: t.title, channel: t.channel })));
     setSize(n);
     setMatches(buildBracket(picked));
     setChampion(null);
