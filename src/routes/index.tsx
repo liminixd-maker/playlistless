@@ -35,6 +35,65 @@ const LS_STATS = "ytguessless.stats";
 const LS_ROUND = "ytguessless.round";
 const LS_SETTINGS = "ytguessless.settings";
 const LS_MODE = "ytguessless.mode";
+const LS_PLAYED = "playlistless_played_songs";
+
+type PlayedEntry = { id: string; title: string; channel?: string };
+
+function usePlayedHistory() {
+  const [played, setPlayed] = useState<Record<string, PlayedEntry>>({});
+  // Load once
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_PLAYED);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        // Back-compat: array of ids
+        const map: Record<string, PlayedEntry> = {};
+        for (const v of parsed) {
+          if (typeof v === "string") map[v] = { id: v, title: v };
+          else if (v && typeof v.id === "string") map[v.id] = { id: v.id, title: v.title || v.id, channel: v.channel };
+        }
+        setPlayed(map);
+      } else if (parsed && typeof parsed === "object") {
+        setPlayed(parsed);
+      }
+    } catch {}
+  }, []);
+  // Persist
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_PLAYED, JSON.stringify(played));
+    } catch {}
+  }, [played]);
+
+  const markPlayed = (entries: PlayedEntry | PlayedEntry[]) => {
+    const list = Array.isArray(entries) ? entries : [entries];
+    if (!list.length) return;
+    setPlayed((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const e of list) {
+        if (!e?.id) continue;
+        if (!next[e.id]) {
+          next[e.id] = { id: e.id, title: e.title || e.id, channel: e.channel };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  };
+  const unlock = (id: string) => {
+    setPlayed((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+  const clearAll = () => setPlayed({});
+  return { played, markPlayed, unlock, clearAll };
+}
 
 type Mode = "classic" | "fx" | "tournament";
 
