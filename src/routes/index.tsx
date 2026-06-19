@@ -1612,12 +1612,16 @@ function TournamentMode({
   accentColor,
   reduceMotion,
   volume,
+  played,
+  markPlayed,
 }: {
   tracks: Track[];
   loading: boolean;
   accentColor: string;
   reduceMotion: boolean;
   volume: number;
+  played: Record<string, PlayedEntry>;
+  markPlayed: (entries: PlayedEntry | PlayedEntry[]) => void;
 }) {
   const [size, setSize] = useState<number | null>(null);
   const [matches, setMatches] = useState<TMatch[]>([]);
