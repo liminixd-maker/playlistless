@@ -1687,6 +1687,8 @@ function TournamentMode({
     const norm = (s: string) => normalize(s);
     const aq = norm(artistQuery.trim());
     return tracks.filter((t) => {
+      // history exclusion
+      if (played[t.id]) return false;
       // keyword exclusion
       for (const k of KEYWORD_TAGS) {
         if (excludedKeywords.has(k.id)) {
